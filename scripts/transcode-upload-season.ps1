@@ -82,8 +82,18 @@ function Get-McArgs {
 }
 
 function Test-MinioObject([string]$Alias, [string]$BucketName, [string]$Key) {
-  & mc @(Get-McArgs) stat "$Alias/$BucketName/$Key" 2>$null | Out-Null
-  return ($LASTEXITCODE -eq 0)
+  # mc ghi ERROR ra stderr khi object chưa có — với $ErrorActionPreference=Stop
+  # PowerShell coi là terminating; cần Continue + nuốt stderr.
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $null = & mc @(Get-McArgs) stat "$Alias/$BucketName/$Key" 2>&1
+    return ($LASTEXITCODE -eq 0)
+  } catch {
+    return $false
+  } finally {
+    $ErrorActionPreference = $prev
+  }
 }
 
 Require-Cmd ffmpeg
