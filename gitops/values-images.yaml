@@ -14,5 +14,5 @@ movieWeb:
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: latest
+    tag: ff872b2
     pullPolicy: Always
