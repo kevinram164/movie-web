@@ -29,9 +29,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Ưu tiên tools/ trong repo (ffmpeg.exe, mc.exe) rồi mới tới PATH
+$script:RepoTools = Join-Path (Split-Path $PSScriptRoot -Parent) "tools"
+if (Test-Path $script:RepoTools) {
+  $env:Path = "$script:RepoTools;$env:Path"
+}
+
 function Require-Cmd($name) {
   if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
-    throw "Thiếu lệnh '$name' trên PATH. Cài ffmpeg và mc (MinIO client)."
+    throw "Thiếu lệnh '$name' trên PATH. Đặt $name.exe vào folder tools\ của repo, hoặc cài ffmpeg / mc."
   }
 }
 
