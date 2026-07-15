@@ -1,9 +1,16 @@
 from datetime import timedelta
 from urllib.parse import urlparse
 
+import urllib3
 from minio import Minio
 
 from app.config import settings
+
+# OpenShift Route self-signed — MinIO client public không verify CA lab
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Tránh GetBucketLocation (thường gây lỗi SSL khi ký qua public Route)
+_MINIO_REGION = "us-east-1"
 
 
 def get_minio() -> Minio:
@@ -12,19 +19,32 @@ def get_minio() -> Minio:
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=settings.minio_secure,
+        region=_MINIO_REGION,
     )
 
 
 def get_minio_public() -> Minio:
-    """Client ký URL theo host công khai (Route) — chữ ký khớp browser PUT/GET."""
+    """Client ký URL theo host công khai (Route) — browser PUT/GET khớp chữ ký."""
     public = urlparse(settings.minio_public_url)
     if not public.netloc:
         return get_minio()
+    http_client = urllib3.PoolManager(
+        timeout=urllib3.Timeout.DEFAULT_TIMEOUT,
+        cert_reqs="CERT_NONE",
+        assert_hostname=False,
+        retries=urllib3.Retry(
+            total=3,
+            backoff_factor=0.2,
+            status_forcelist=[500, 502, 503, 504],
+        ),
+    )
     return Minio(
         public.netloc,
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=(public.scheme or "https") == "https",
+        region=_MINIO_REGION,
+        http_client=http_client,
     )
 
 
