@@ -1,4 +1,6 @@
-# Tạo DB/user movie trên Postgres HA (chạy 1 lần sau khi postgres Ready)
+# Tạo DB/user movie trên Postgres HA *dùng chung* (không đụng user banking)
+# Admin: Secret postgres-ha-postgresql (đã có trên cluster)
+# Password user movie: Secret cinehome-movie-db (Vault → ESO), key password
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -24,24 +26,27 @@ spec:
                 secretKeyRef:
                   name: postgres-ha-postgresql
                   key: postgres-password
+            - name: MOVIE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cinehome-movie-db
+                  key: password
           command:
             - /bin/bash
             - -c
             - |
-              set -e
-              HOST=postgres-ha-postgresql.postgres.svc.cluster.local
-              psql -h "$HOST" -U postgres -d postgres <<'SQL'
-              SELECT 'ok' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'movie');
-              DO $$
-              BEGIN
-                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'movie') THEN
-                  CREATE ROLE movie LOGIN PASSWORD 'movie';
-                END IF;
-              END
-              $$;
-              SELECT 'create db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'movie');
-              SQL
+              set -euo pipefail
+              HOST=postgres-ha-postgresql-primary.postgres.svc.cluster.local
+              PASS_SQL=${MOVIE_PASSWORD//\'/\'\'}
+              psql -h "$HOST" -U postgres -d postgres -v ON_ERROR_STOP=1 -c \
+                "DO \$\$ BEGIN
+                   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'movie') THEN
+                     CREATE ROLE movie LOGIN PASSWORD '${PASS_SQL}';
+                   ELSE
+                     ALTER ROLE movie WITH LOGIN PASSWORD '${PASS_SQL}';
+                   END IF;
+                 END \$\$;"
               psql -h "$HOST" -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='movie'" | grep -q 1 \
                 || psql -h "$HOST" -U postgres -d postgres -c "CREATE DATABASE movie OWNER movie;"
               psql -h "$HOST" -U postgres -d movie -c "GRANT ALL ON SCHEMA public TO movie;"
-              echo "movie database ready"
+              echo "movie database ready (shared postgres-ha; banking untouched)"

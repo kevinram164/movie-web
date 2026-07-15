@@ -1,11 +1,10 @@
-# MinIO Bitnami — PVC trên nfs-csi
-# Deploy qua ArgoCD Application infra-minio
-
+# MinIO Bitnami — credentials từ Vault → ESO Secret `minio` (không password trong Git)
 mode: standalone
 
 auth:
-  rootUser: minioadmin
-  rootPassword: "ChangeMeMinioMovie2026!"
+  existingSecret: minio
+  rootUserSecretKey: root-user
+  rootPasswordSecretKey: root-password
 
 defaultBuckets: "movies,posters"
 
@@ -27,6 +26,3 @@ service:
   ports:
     api: 9000
     console: 9001
-
-# Public read cho HLS + poster (browser fetch trực tiếp)
-# Policy apply bằng Job mc sau khi MinIO Ready — xem deploy/minio/bucket-policy-job.yaml

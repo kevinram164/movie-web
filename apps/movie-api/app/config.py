@@ -5,11 +5,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "movie-api"
-    database_url: str = "postgresql+psycopg2://movie:movie@postgres-ha-postgresql.postgres.svc.cluster.local:5432/movie"
+    database_url: str = ""  # bắt buộc từ env (Vault → cinehome-app-secrets)
+
 
     minio_endpoint: str = "minio.minio.svc.cluster.local:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+
     minio_secure: bool = False
     minio_bucket_movies: str = "movies"
     minio_bucket_posters: str = "posters"
@@ -20,7 +22,8 @@ class Settings(BaseSettings):
     stream_url_ttl: int = 3600
     upload_url_ttl: int = 7200
 
-    redis_url: str = "redis://:ChangeMeRedis2026!@redis-ha-master.redis.svc.cluster.local:6379/0"
+    redis_url: str = ""
+
     media_queue: str = "cinehome:media:jobs"
 
     cors_origins: str = "*"

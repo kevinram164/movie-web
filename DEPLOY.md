@@ -211,32 +211,45 @@ Tag thật do CI ghi vào `gitops/values-images.yaml`.
 
 ---
 
-## Bước E — Postgres (DB `movie`)
+## Bước E — Shared infra (banking) + Vault CineHome
 
-Infra Postgres (nếu chưa):
+OCP đang dùng chung:
+
+| | Live |
+|--|--|
+| Redis | Bitnami `redis` 20.6.2 release `redis-ha` — Sentinel **3 node**, Secret `redis-ha`/`redis-password`, PVC 20Gi |
+| Postgres | Bitnami `postgresql` 15.5.32 release `postgres-ha` — **primary+1 read**, chart user/db=`banking`, Secret `postgres-ha-postgresql`, PVC **1Gi** |
+| MinIO | ns `minio` trống (chưa service) — deploy sau |
+| Vault | đã có `secret/cinehome/harbor*`, `secret/banking/*` |
+
+**Không** đổi Secret / `auth.username` Redis–Postgres (sẽ gãy banking). CineHome chỉ thêm DB `movie` + Vault app DSN.
+
+### E.0 Seed Vault
 
 ```bash
-oc apply -f phase9-gitops-platform/environments/dev-ocp/argocd/applications/infra-app-of-apps.yaml -n $ARGOCD_NS
+oc exec -i -n vault vault-0 -- env \
+  VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root \
+  MOVIE_DB_PASSWORD='Tech1604' \
+  bash -s < scripts/vault-seed-cinehome-secrets.sh
 ```
 
-ArgoCD app `cinehome` còn Job `movie-db-init` (tạo DB/user `movie`) khi sync giai đoạn F.  
-Nếu Postgres đã có từ lab banking: Job sẽ tạo DB `movie` trên instance hiện có (kiểm tra secret name Postgres khớp Job).
+`REDIS_URL` mặc định không password: `redis://redis-ha.redis.svc.cluster.local:6379/0`
 
-Kiểm tra:
+### E.1 Sync ESO CineHome
 
 ```bash
-oc get pods -n postgres
-# hoặc sau khi cinehome sync:
+oc get secret cinehome-app-secrets -n npd-movie
+oc get secret cinehome-movie-db -n postgres
+```
+
+### E.2 Job tạo DB movie (không đụng banking)
+
+```bash
 oc logs -n postgres job/movie-db-init
 ```
 
-Đổi mật khẩu mặc định trong:
-
-- `phase9-gitops-platform/infra-values/postgres.yaml`  
-- `charts/movie/values.yaml` (`DATABASE_URL`)  
-trước khi dùng nghiêm túc.
-
----
+Write DSN: `postgres-ha-postgresql-primary.postgres.svc.cluster.local`  
+Redis: `redis-ha.redis.svc.cluster.local:6379`
 
 ## Bước F — Deploy CineHome (ArgoCD)
 
@@ -293,12 +306,12 @@ Bạn sẽ thấy:
 
 ### F.5 MinIO password
 
-Mặc định lab trong `deploy/minio/values.yaml`:
+Lấy từ Vault (`secret/cinehome/minio`), không lưu trong Git:
 
-- User: `minioadmin`  
-- Password: xem `auth.rootPassword` trong file đó  
-
-Đổi password trước khi expose ra ngoài nhà.
+```bash
+oc exec -n vault vault-0 -- sh -c \
+  'export VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root; vault kv get -field=rootPassword secret/cinehome/minio'
+```
 
 ---
 

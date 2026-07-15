@@ -31,6 +31,13 @@ spec:
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+            {{- range .Values.mediaWorker.secretEnvKeys }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.appSecretName }}
+                  key: {{ . }}
+            {{- end }}
           resources:
             {{- toYaml .Values.mediaWorker.resources | nindent 12 }}
           volumeMounts:

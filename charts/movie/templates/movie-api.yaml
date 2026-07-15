@@ -34,6 +34,13 @@ spec:
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+            {{- range .Values.movieApi.secretEnvKeys }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.appSecretName }}
+                  key: {{ . }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/health

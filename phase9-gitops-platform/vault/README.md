@@ -6,7 +6,14 @@ Sync secret từ Vault → K8s (ESO), không `oc create secret` thủ công cho 
 
 ```text
 secret/cinehome/harbor           → robot ci-push project movie-web (Jenkins Kaniko push)
-secret/cinehome/harbor-pull      → robot k8s-pull project movie-web → harbor-pull-creds (ns npd-movie)
+secret/cinehome/harbor-pull      → robot k8s-pull → harbor-pull-creds (ns npd-movie)
+secret/cinehome/app              → DATABASE_URL, REDIS_URL, MINIO_* → cinehome-app-secrets (npd-movie)
+secret/cinehome/movie-db         → password user `movie` → cinehome-movie-db (ns postgres) + Job movie-db-init
+secret/cinehome/minio            → (khi deploy MinIO) rootUser/rootPassword → Secret minio
+# Shared infra secrets (KHÔNG ghi đè từ CineHome):
+#   redis/redis-ha                 key redis-password
+#   postgres/postgres-ha-postgresql keys password, postgres-password, replication-password
+#   Vault banking: secret/banking/db , secret/banking/rabbitmq
 secret/platform/harbor           → (banking CI — không đụng nếu tách)
 secret/platform/harbor-pull      → (banking pull — không đụng)
 secret/platform/harbor-registry-ca → CA PEM → openshift-config (Image Config)
@@ -14,7 +21,7 @@ secret/platform/github           → GitHub PAT (bump gitops/values-images.yaml)
 secret/platform/jenkins          → Jenkins admin (ESO → Helm)
 ```
 
-> Banking giữ `secret/platform/harbor-pull`. CineHome dùng **`secret/cinehome/harbor-pull`**.
+> **Không** lưu password DB/Redis/MinIO trong Git. Seed: `scripts/vault-seed-cinehome-secrets.sh`
 
 ---
 
@@ -142,6 +149,33 @@ vault kv put secret/cinehome/harbor \
 ```
 
 Kiểm tra: `vault kv get secret/cinehome/harbor`
+
+#### 5.4c `secret/cinehome/app` + `movie-db` — CineHome trên infra dùng chung banking
+
+Postgres/Redis **đã có** (banking). CineHome chỉ:
+
+1. Tạo user/DB `movie` (Job `movie-db-init`)  
+2. Lưu `DATABASE_URL` / `REDIS_URL` vào Vault cho app  
+
+```bash
+oc exec -i -n vault vault-0 -- env \
+  VAULT_ADDR=http://127.0.0.1:8200 \
+  VAULT_TOKEN=root \
+  MOVIE_DB_PASSWORD='YOUR_MOVIE_DB_PASSWORD' \
+  bash -s < scripts/vault-seed-cinehome-secrets.sh
+```
+
+`REDIS_URL` mặc định **không** password (`redis://redis-ha.redis.svc.cluster.local:6379/0`). Chỉ set `REDIS_PASSWORD=...` nếu Redis bật AUTH.
+
+| Vault | K8s Secret | Namespace | Ghi chú |
+|-------|------------|-----------|---------|
+| `cinehome/app` | `cinehome-app-secrets` | `npd-movie` | App env |
+| `cinehome/movie-db` | `cinehome-movie-db` | `postgres` | Password user movie |
+| (cluster) | `redis-ha` | `redis` | Shared — đừng ESO ghi đè |
+| (cluster) | `postgres-ha-postgresql` | `postgres` | Shared banking — đừng ESO ghi đè |
+
+DSN write: `postgres-ha-postgresql-primary.postgres.svc.cluster.local:5432`  
+Redis: `redis-ha.redis.svc.cluster.local:6379` (Sentinel HA 3 node)
 
 Tách khỏi banking `secret/platform/harbor-pull`.  
 ESO → K8s secret `harbor-pull-creds` chỉ trong **`npd-movie`**.

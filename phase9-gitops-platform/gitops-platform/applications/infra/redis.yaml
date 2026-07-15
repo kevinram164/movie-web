@@ -25,6 +25,9 @@ spec:
           master:
             persistence:
               storageClass: nfs-csi
+          replica:
+            persistence:
+              storageClass: nfs-csi
     - repoURL: https://github.com/kevinram164/movie-web.git
       targetRevision: main
       ref: values
