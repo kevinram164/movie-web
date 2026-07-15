@@ -31,7 +31,8 @@ oc apply -f phase9-gitops-platform/environments/dev-ocp/argocd/applications/plat
 oc apply -f phase9-gitops-platform/environments/dev-ocp/argocd/applications/platform-routes-app-of-apps.yaml -n $ARGOCD_NS
 ```
 
-Seed Vault (`platform/harbor`, `harbor-pull`, `github`, `jenkins`) — [vault/README.md](../vault/README.md).
+Seed Vault (`platform/harbor`, **`cinehome/harbor-pull`**, `github`, `jenkins`) — [vault/README.md](../vault/README.md).  
+Không ghi đè `platform/harbor-pull` (banking).
 
 **Không** apply `cinehome-app-of-apps` ở bước này.
 

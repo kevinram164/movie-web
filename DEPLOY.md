@@ -89,12 +89,13 @@ Nếu còn project `banking-platform` với Kong/Coroot: **giữ nguyên**. App 
 2. Tạo project **`movie-web`** (private hoặc public lab)  
 3. Robot accounts (hoặc tái dùng robot lab):
    - **ci-push** — push image (Jenkins Kaniko) → Vault `secret/platform/harbor`
-   - **k8s-pull** — pull only → Vault `secret/platform/harbor-pull`
+   - **k8s-pull** (Harbor project `movie-web`) → Vault **`secret/cinehome/harbor-pull`**  
+     (banking giữ `secret/platform/harbor-pull` — không dùng chung)
 
 Ví dụ seed Vault (trong pod `vault-0`):
 
 ```bash
-vault kv put secret/platform/harbor-pull \
+vault kv put secret/cinehome/harbor-pull \
   registry='harbor-platform.apps.ocp01.npd.co' \
   username='robot$movie-web+k8s-pull' \
   password='<TOKEN>'

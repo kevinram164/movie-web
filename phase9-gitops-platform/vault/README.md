@@ -5,14 +5,15 @@ Sync secret từ Vault → K8s (ESO), không `oc create secret` thủ công cho 
 ## Vault paths (KV v2)
 
 ```text
-secret/platform/harbor      → robot ci-push (Jenkins Kaniko)
-secret/platform/harbor-pull → robot k8s-pull → harbor-pull-creds (ESO: ns npd-movie + platform)
+secret/platform/harbor           → robot ci-push (Jenkins Kaniko — có thể dùng chung lab)
+secret/cinehome/harbor-pull      → robot k8s-pull project movie-web → harbor-pull-creds (ns npd-movie)
+secret/platform/harbor-pull      → (banking — không đụng)
 secret/platform/harbor-registry-ca → CA PEM → openshift-config (Image Config)
-secret/platform/github      → GitHub PAT (bump gitops/values-images.yaml)
-secret/platform/jenkins     → Jenkins admin (ESO → Helm)
+secret/platform/github           → GitHub PAT (bump gitops/values-images.yaml)
+secret/platform/jenkins          → Jenkins admin (ESO → Helm)
 ```
 
-> Banking paths (`secret/banking/*`, RabbitMQ) đã bỏ khỏi stack CineHome.
+> Banking giữ `secret/platform/harbor-pull`. CineHome dùng **`secret/cinehome/harbor-pull`**.
 
 ---
 
@@ -129,19 +130,20 @@ vault kv put secret/platform/harbor \
   password='HARBOR_ROBOT_TOKEN'
 ```
 
-#### 5.5 `secret/platform/harbor-pull` — robot k8s-pull (kubelet pull)
+#### 5.5 `secret/cinehome/harbor-pull` — robot k8s-pull (CineHome / ns npd-movie)
 
-ESO sync → K8s secret `harbor-pull-creds` (ns `npd-movie`, `platform`). **Không** `oc create secret` thủ công.
+Tách khỏi banking `secret/platform/harbor-pull`.  
+ESO → K8s secret `harbor-pull-creds` chỉ trong **`npd-movie`**.
 
 ```bash
-# OCP
-vault kv put secret/platform/harbor-pull \
+# OCP — robot Harbor project movie-web (pull only)
+vault kv put secret/cinehome/harbor-pull \
   registry='harbor-platform.apps.ocp01.npd.co' \
   username='robot$movie-web+k8s-pull' \
   password='HARBOR_ROBOT_TOKEN'
 ```
 
-Kiểm tra sau sync `platform-external-secrets-config`:
+Kiểm tra:
 
 ```bash
 oc get externalsecret harbor-pull-creds -n npd-movie
@@ -305,7 +307,8 @@ vault kv put secret/rabbitmq/admin \
 | `secret/banking/db` | `banking/db` | `banking-db-secret` | `banking` |
 | `secret/banking/rabbitmq` | `banking/rabbitmq` | `rabbitmq-connection-secret` | `banking` |
 | `secret/rabbitmq/admin` | `rabbitmq/admin` | `rabbitmq-secret` | `rabbit` |
-| `secret/platform/harbor-pull` | `platform/harbor-pull` | `harbor-pull-creds` | `banking`, `platform` |
+| `secret/platform/harbor-pull` | `platform/harbor-pull` | `harbor-pull-creds` | banking / `platform` (lab cũ) |
+| `secret/cinehome/harbor-pull` | `cinehome/harbor-pull` | `harbor-pull-creds` | **`npd-movie`** (CineHome) |
 | `secret/platform/harbor-registry-ca` | `platform/harbor-registry-ca` | `harbor-registry-ca-vault` (+ ConfigMap qua script) | `openshift-config` |
 | `secret/platform/jenkins` | `platform/jenkins` | `jenkins-platform-credentials` | `platform` |
 

@@ -72,8 +72,8 @@ oc apply -f phase9-gitops-platform/environments/dev-ocp/argocd/applications/plat
 ### Harbor
 
 1. UI Harbor → project **`movie-web`**
-2. Robot push (CI) + pull (k8s) → seed Vault `platform/harbor`, `platform/harbor-pull` (như lab trước)
-3. ESO tạo `harbor-pull-creds` trong **`npd-movie`** + `platform`  
+2. Robot push (CI) → Vault `platform/harbor`; pull CineHome → Vault **`cinehome/harbor-pull`** (không đụng `platform/harbor-pull` của banking)
+3. ESO tạo `harbor-pull-creds` trong **`npd-movie`**  
    (`vault/external-secrets/harbor-pull-external-secret.yaml`)
 
 ```bash
