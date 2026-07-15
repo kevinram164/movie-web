@@ -2,17 +2,17 @@
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: fb63ac1
+    tag: c04ea64
     pullPolicy: Always
 
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: fb63ac1
+    tag: c04ea64
     pullPolicy: Always
 
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: fb63ac1
+    tag: c04ea64
     pullPolicy: Always
