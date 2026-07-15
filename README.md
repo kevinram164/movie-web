@@ -19,21 +19,31 @@ Upload ví dụ:
 bash scripts/transcode-upload.sh /path/to/ep.mp4 x-men-animated/s01e01
 ```
 
-## Dev local
+## Upload phim từ Windows (MP4 + SRT)
 
-```bash
-# API
-cd apps/movie-api && pip install -r requirements.txt
-# SQLite local nhanh (tuỳ chọn): set DATABASE_URL=sqlite:///./movie.db — hiện mặc định Postgres
-uvicorn app.main:app --reload --port 8080
+Trên ổ cứng bạn chỉ cần **`.mp4` + `.srt`** (như folder Season 1 X-Men).  
+**HLS** được tạo bằng `ffmpeg` rồi mới đẩy lên MinIO — web không stream thẳng MP4.
 
-# UI
-cd phim-web-interface
-cp .env.example .env.local   # nếu có
-API_PROXY_TARGET=http://127.0.0.1:8080 pnpm install && pnpm dev
+```powershell
+# 1 lần: kết nối MinIO trên OCP
+mc alias set cinehome https://minio-api-minio.apps.ocp01.npd.co minioadmin "<password>"
+
+# Cả folder Season 1 → convert + upload
+.\scripts\transcode-upload-season.ps1 `
+  -SourceDir "D:\Movie\...\Season 1 (1992-93)" `
+  -SeriesSlug "x-men-animated"
 ```
 
-Mở http://localhost:3000 — `/api/*` proxy sang movie-api.
+Script parse tên kiểu `X-Men T.A.S - S01 E01 - Night Of The Sentinels....mp4`  
+→ MinIO: `movies/x-men-animated/s01e01/master.m3u8` (+ `.ts`, và `subs.vi.vtt` nếu có `.srt`).
+
+| Series trên web | `-SeriesSlug` |
+|-----------------|---------------|
+| X-Men | `x-men-animated` |
+| Spider-Man | `spiderman-animated` |
+| Batman | `batman-animated` |
+
+Chỉ convert không upload: thêm `-SkipUpload`. Thử parse: `-WhatIf`.
 
 ## Kiến trúc
 
