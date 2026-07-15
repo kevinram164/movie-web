@@ -5,9 +5,10 @@ Sync secret từ Vault → K8s (ESO), không `oc create secret` thủ công cho 
 ## Vault paths (KV v2)
 
 ```text
-secret/platform/harbor           → robot ci-push (Jenkins Kaniko — có thể dùng chung lab)
+secret/cinehome/harbor           → robot ci-push project movie-web (Jenkins Kaniko push)
 secret/cinehome/harbor-pull      → robot k8s-pull project movie-web → harbor-pull-creds (ns npd-movie)
-secret/platform/harbor-pull      → (banking — không đụng)
+secret/platform/harbor           → (banking CI — không đụng nếu tách)
+secret/platform/harbor-pull      → (banking pull — không đụng)
 secret/platform/harbor-registry-ca → CA PEM → openshift-config (Image Config)
 secret/platform/github           → GitHub PAT (bump gitops/values-images.yaml)
 secret/platform/jenkins          → Jenkins admin (ESO → Helm)
@@ -130,7 +131,17 @@ vault kv put secret/platform/harbor \
   password='HARBOR_ROBOT_TOKEN'
 ```
 
-#### 5.5 `secret/cinehome/harbor-pull` — robot k8s-pull (CineHome / ns npd-movie)
+#### 5.4b `secret/cinehome/harbor` — robot ci-push (Jenkins Kaniko → project movie-web)
+
+Tách khỏi banking `secret/platform/harbor`. Pipeline CineHome đọc path này (`vaultHarborPath: cinehome/harbor`).
+
+```bash
+vault kv put secret/cinehome/harbor \
+  username='robot$movie-web+ci-push' \
+  password='HARBOR_ROBOT_TOKEN'
+```
+
+Kiểm tra: `vault kv get secret/cinehome/harbor`
 
 Tách khỏi banking `secret/platform/harbor-pull`.  
 ESO → K8s secret `harbor-pull-creds` chỉ trong **`npd-movie`**.

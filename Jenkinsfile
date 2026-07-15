@@ -11,7 +11,7 @@ cinehomePipeline([
   gitopsValuesFile    : 'gitops/values-images.yaml',
   vaultAddr           : 'http://vault.vault.svc.cluster.local:8200',
   vaultRole           : 'jenkins-kaniko',
-  vaultHarborPath     : 'platform/harbor',
+  vaultHarborPath     : 'cinehome/harbor',
   vaultGithubPath     : 'platform/github',
   kanikoSkipTlsVerify : true,
 ])
