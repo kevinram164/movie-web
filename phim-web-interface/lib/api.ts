@@ -120,15 +120,31 @@ export function uploadComplete(episodeId: number) {
   })
 }
 
-export function uploadEpisodeFiles(episodeId: number, video: File, subtitle?: File | null) {
-  const form = new FormData()
-  form.append("video", video)
-  if (subtitle) form.append("subtitle", subtitle)
-  return request<Episode>(`/api/episodes/${episodeId}/upload`, {
-    method: "POST",
-    body: form,
-    headers: {},
+/** Upload lớn: PUT thẳng MinIO (tránh proxy multipart qua Next → 500). */
+export async function putToPresigned(url: string, file: File) {
+  const res = await fetch(url, {
+    method: "PUT",
+    body: file,
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
   })
+  if (!res.ok) {
+    throw new Error(`Upload MinIO thất bại: HTTP ${res.status}`)
+  }
+}
+
+export async function uploadViaPresign(
+  episodeId: number,
+  video: File,
+  subtitle?: File | null,
+) {
+  const init = await uploadInit(episodeId, video.name, Boolean(subtitle))
+  await putToPresigned(init.upload_url, video)
+  if (subtitle && init.subtitle_upload_url) {
+    await putToPresigned(init.subtitle_upload_url, subtitle)
+  }
+  return uploadComplete(episodeId)
 }
 
 export const genreCategories = [

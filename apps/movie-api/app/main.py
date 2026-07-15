@@ -513,9 +513,16 @@ def upload_episode_files(
         ep.status = "FAILED"
         ep.error_message = f"upload failed: {exc}"
         db.commit()
+        print(f"[upload] ep={episode_id} FAILED: {exc}")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return upload_complete(episode_id, db)
+    try:
+        return upload_complete(episode_id, db)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        print(f"[upload] ep={episode_id} complete FAILED: {exc}")
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/api/movies", response_model=list[MovieOut])

@@ -10,7 +10,7 @@ import {
   fetchEpisode,
   fetchSeries,
   fetchSeriesList,
-  uploadEpisodeFiles,
+  uploadViaPresign,
   type Episode,
   type SeriesCard,
   type SeriesDetail,
@@ -97,10 +97,10 @@ export default function AdminUploadPage() {
       return
     }
     setBusy(true)
-    setLog("Đang upload qua API → MinIO raw/ …")
+    setLog("upload-init → PUT MinIO (presigned) → upload-complete …")
     setStatus("UPLOADING")
     try {
-      const ep = await uploadEpisodeFiles(episodeId, video, subtitle)
+      const ep = await uploadViaPresign(episodeId, video, subtitle)
       setStatus(ep.status || "PROCESSING")
       setLog(
         `Xong upload. Status: ${ep.status}. media-worker đang convert HLS — đợi READY rồi xem tập.`,
@@ -128,7 +128,8 @@ export default function AdminUploadPage() {
 
         <h1 className="font-display text-3xl font-extrabold">Upload & convert</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Upload MP4 (+ SRT) lên MinIO → Redis queue → media-worker ffmpeg HLS trên cluster.
+          Browser PUT thẳng MinIO (presigned) → Redis → media-worker ffmpeg HLS. Không proxy file lớn qua
+          Next.js.
         </p>
 
         <div className="mt-8 space-y-6">
