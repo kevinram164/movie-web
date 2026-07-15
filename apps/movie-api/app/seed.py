@@ -54,6 +54,30 @@ ANIMATION_SERIES = [
         ],
     },
     {
+        "slug": "x-men-97",
+        "title": "X-Men '97",
+        "english_title": "X-Men '97",
+        "description": (
+            "Tái sinh X-Men The Animated Series — upload HLS qua script Windows "
+            "hoặc /admin. Folder nguồn: X97."
+        ),
+        "year_start": 2024,
+        "franchise": "x-men",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/poster-1.png",
+        "backdrop_key": "/movies/hero-backdrop.png",
+        "rating": "9.0",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Season 1",
+                "episodes": [
+                    ("Episode 1", "Tập 1 — thay bằng upload thật."),
+                ],
+            },
+        ],
+    },
+    {
         "slug": "spiderman-animated",
         "title": "Spider-Man Animations",
         "english_title": "Spider-Man: The Animated Series",

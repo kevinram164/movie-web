@@ -34,18 +34,26 @@ mc alias set cinehome https://minio-api-minio.apps.ocp01.npd.co minioadmin "<pas
 .\scripts\transcode-upload-season.ps1 `
   -SourceDir "D:\Movie\...\Season 1 (1992-93)" `
   -SeriesSlug "x-men-animated"
+
+# CẢ BỘ (Season 1–5 + X97) — chạy qua đêm, resume được
+.\scripts\transcode-upload-series.ps1 `
+  -RootDir "D:\Movie\...\02. X-Men - The Animated Series (Complete - 480p SD)" `
+  -SkipExisting `
+  -SyncCatalog
 ```
 
 Script parse tên kiểu `X-Men T.A.S - S01 E01 - Night Of The Sentinels....mp4`  
-→ MinIO: `movies/x-men-animated/s01e01/master.m3u8` (+ `.ts`, và `subs.vi.vtt` nếu có `.srt`).
+→ MinIO: `movies/x-men-animated/s01e01/master.m3u8` (+ `.ts`, và `subs.vi.vtt` nếu có `.srt`).  
+Folder **X97** → slug riêng `x-men-97` (không đè Season 1 TAS).
 
-| Series trên web | `-SeriesSlug` |
-|-----------------|---------------|
-| X-Men | `x-men-animated` |
+| Series trên web | slug |
+|-----------------|------|
+| X-Men TAS | `x-men-animated` |
+| X-Men '97 | `x-men-97` |
 | Spider-Man | `spiderman-animated` |
 | Batman | `batman-animated` |
 
-Chỉ convert không upload: thêm `-SkipUpload`. Thử parse: `-WhatIf`.
+Cờ hữu ích: `-WhatIf` (chỉ liệt kê), `-SkipExisting` (bỏ tập đã có trên MinIO), `-SyncCatalog` (tạo episode trên API nếu thiếu), `-OnlyFolders "Season 1 (1992-93)"`.
 
 ## Kiến trúc
 
