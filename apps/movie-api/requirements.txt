@@ -6,3 +6,4 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 minio==7.2.13
 python-multipart==0.0.20
+redis==5.2.1

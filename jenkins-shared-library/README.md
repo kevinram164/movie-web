@@ -19,7 +19,7 @@ git push → Jenkins Multibranch (Jenkinsfile)
 |---------|---------|----------|--------------|
 | `movie-api` | `apps/movie-api` | `movieApi` | `.../movie-web/movie-api` |
 | `movie-web` | `phim-web-interface` | `movieWeb` | `.../movie-web/movie-web` |
-| `media-worker` | `apps/media-worker` | `mediaWorker` | optional (v2 Kafka worker) |
+| `media-worker` | `apps/media-worker` | `mediaWorker` | `.../movie-web/media-worker` |
 
 `BUILD_TARGET`: `auto` | `all` | tên service.
 

@@ -10,6 +10,7 @@ const navItems = [
   { label: "X-Men", href: "/series/x-men-animated" },
   { label: "Spider-Man", href: "/series/spiderman-animated" },
   { label: "Batman", href: "/series/batman-animated" },
+  { label: "Upload", href: "/admin" },
 ]
 
 export function SiteHeader() {

@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_
@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.db import Episode, Movie, Season, Series, get_db, init_db
-from app.minio_client import ensure_buckets, public_object_url
+from app.minio_client import ensure_buckets, presigned_put_url, public_object_url, put_fileobj
+from app.queue import enqueue_media_job
 from app.seed import seed_movies, seed_series
 
 app = FastAPI(title=settings.app_name, version="1.1.0")
@@ -87,6 +88,7 @@ class EpisodeOut(BaseModel):
     duration_minutes: int
     hls_key: str
     poster_url: str = ""
+    status: str = "PENDING"
     season_number: int = 0
     series_slug: str = ""
     series_title: str = ""
@@ -149,6 +151,7 @@ def to_episode_out(ep: Episode, season: Season | None = None, series: Series | N
         duration_minutes=ep.duration_minutes,
         hls_key=ep.hls_key,
         poster_url=media_url(ep.poster_key or (series.poster_key if series else "")),
+        status=getattr(ep, "status", None) or "PENDING",
         season_number=season.number if season else 0,
         series_slug=series.slug if series else "",
         series_title=series.title if series else "",
@@ -313,10 +316,206 @@ def stream_episode(episode_id: int, db: Session = Depends(get_db)):
     ep = db.get(Episode, episode_id)
     if not ep:
         raise HTTPException(status_code=404, detail="Episode not found")
+    if getattr(ep, "status", None) == "PROCESSING":
+        raise HTTPException(status_code=409, detail="Đang convert HLS, thử lại sau")
+    if getattr(ep, "status", None) == "FAILED":
+        raise HTTPException(status_code=409, detail=ep.error_message or "Convert failed")
     if not ep.hls_key:
-        raise HTTPException(status_code=404, detail="HLS not configured")
+        raise HTTPException(status_code=404, detail="HLS not ready — upload/convert trước")
     url = public_object_url(settings.minio_bucket_movies, ep.hls_key)
     return StreamOut(episode_id=ep.id, hls_url=url, expires_in=settings.stream_url_ttl)
+
+
+class EpisodeCreate(BaseModel):
+    title: str
+    number: int
+    description: str = ""
+    duration_minutes: int = 22
+
+
+class UploadInitOut(BaseModel):
+    episode_id: int
+    raw_key: str
+    upload_url: str
+    subtitle_raw_key: str = ""
+    subtitle_upload_url: str = ""
+    expires_in: int
+
+
+@app.post("/api/series/{slug}/seasons/{season_number}/episodes", response_model=EpisodeOut, status_code=201)
+def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Session = Depends(get_db)):
+    series = load_series_query(db).filter(Series.slug == slug).first()
+    if not series:
+        raise HTTPException(status_code=404, detail="Series not found")
+    season = next((s for s in series.seasons if s.number == season_number), None)
+    if not season:
+        season = Season(series_id=series.id, number=season_number, title=f"Season {season_number}")
+        db.add(season)
+        db.flush()
+    exists = next((e for e in season.episodes if e.number == body.number), None)
+    if exists:
+        raise HTTPException(status_code=409, detail="Episode number already exists")
+    ep_code = f"s{season_number:02d}e{body.number:02d}"
+    ep = Episode(
+        season_id=season.id,
+        number=body.number,
+        title=body.title,
+        description=body.description,
+        duration_minutes=body.duration_minutes,
+        hls_key=f"{series.slug}/{ep_code}/master.m3u8",
+        poster_key=series.poster_key,
+        status="PENDING",
+    )
+    db.add(ep)
+    db.commit()
+    db.refresh(ep)
+    return to_episode_out(ep, season, series)
+
+
+@app.post("/api/episodes/{episode_id}/upload-init", response_model=UploadInitOut)
+def upload_init(
+    episode_id: int,
+    filename: str = Query("video.mp4"),
+    with_subtitle: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    ep = (
+        db.query(Episode)
+        .options(joinedload(Episode.season).joinedload(Season.series))
+        .filter(Episode.id == episode_id)
+        .first()
+    )
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    series = ep.season.series
+    ep_code = f"s{ep.season.number:02d}e{ep.number:02d}"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+    if ext not in ("mp4", "mkv", "avi", "mov", "webm"):
+        ext = "mp4"
+    raw_key = f"{series.slug}/{ep_code}/source.{ext}"
+    ep.raw_key = raw_key
+    ep.status = "UPLOADING"
+    ep.error_message = ""
+    if not ep.hls_key:
+        ep.hls_key = f"{series.slug}/{ep_code}/master.m3u8"
+
+    sub_key = ""
+    sub_url = ""
+    if with_subtitle:
+        sub_key = f"{series.slug}/{ep_code}/source.srt"
+        ep.subtitle_raw_key = sub_key
+        sub_url = presigned_put_url(settings.minio_bucket_raw, sub_key)
+
+    db.commit()
+    upload_url = presigned_put_url(settings.minio_bucket_raw, raw_key)
+    return UploadInitOut(
+        episode_id=ep.id,
+        raw_key=raw_key,
+        upload_url=upload_url,
+        subtitle_raw_key=sub_key,
+        subtitle_upload_url=sub_url,
+        expires_in=settings.upload_url_ttl,
+    )
+
+
+@app.post("/api/episodes/{episode_id}/upload-complete", response_model=EpisodeOut)
+def upload_complete(episode_id: int, db: Session = Depends(get_db)):
+    ep = (
+        db.query(Episode)
+        .options(joinedload(Episode.season).joinedload(Season.series))
+        .filter(Episode.id == episode_id)
+        .first()
+    )
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    if not ep.raw_key:
+        raise HTTPException(status_code=400, detail="Chưa upload-init / thiếu raw_key")
+    ep.status = "PROCESSING"
+    ep.error_message = ""
+    db.commit()
+
+    series = ep.season.series
+    try:
+        enqueue_media_job(
+            {
+                "episode_id": ep.id,
+                "series_slug": series.slug,
+                "season_number": ep.season.number,
+                "episode_number": ep.number,
+                "raw_key": ep.raw_key,
+                "subtitle_raw_key": ep.subtitle_raw_key or "",
+                "hls_key": ep.hls_key,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        ep.status = "FAILED"
+        ep.error_message = f"enqueue failed: {exc}"
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    db.refresh(ep)
+    return to_episode_out(ep)
+
+
+@app.post("/api/episodes/{episode_id}/upload", response_model=EpisodeOut)
+def upload_episode_files(
+    episode_id: int,
+    video: UploadFile = File(...),
+    subtitle: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+):
+    """Upload qua API (cùng origin / Next rewrite) — tránh CORS browser→MinIO."""
+    ep = (
+        db.query(Episode)
+        .options(joinedload(Episode.season).joinedload(Season.series))
+        .filter(Episode.id == episode_id)
+        .first()
+    )
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    series = ep.season.series
+    ep_code = f"s{ep.season.number:02d}e{ep.number:02d}"
+    filename = video.filename or "video.mp4"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+    if ext not in ("mp4", "mkv", "avi", "mov", "webm"):
+        ext = "mp4"
+    raw_key = f"{series.slug}/{ep_code}/source.{ext}"
+    ep.raw_key = raw_key
+    ep.status = "UPLOADING"
+    ep.error_message = ""
+    if not ep.hls_key:
+        ep.hls_key = f"{series.slug}/{ep_code}/master.m3u8"
+
+    sub_key = ""
+    if subtitle is not None and subtitle.filename:
+        sub_key = f"{series.slug}/{ep_code}/source.srt"
+        ep.subtitle_raw_key = sub_key
+    db.commit()
+
+    try:
+        put_fileobj(
+            settings.minio_bucket_raw,
+            raw_key,
+            video.file,
+            length=getattr(video, "size", None),
+            content_type=video.content_type or "video/mp4",
+        )
+        if sub_key and subtitle is not None:
+            put_fileobj(
+                settings.minio_bucket_raw,
+                sub_key,
+                subtitle.file,
+                length=getattr(subtitle, "size", None),
+                content_type="application/x-subrip",
+            )
+    except Exception as exc:  # noqa: BLE001
+        ep.status = "FAILED"
+        ep.error_message = f"upload failed: {exc}"
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return upload_complete(episode_id, db)
 
 
 @app.get("/api/movies", response_model=list[MovieOut])

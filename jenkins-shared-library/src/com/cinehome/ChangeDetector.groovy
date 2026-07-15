@@ -9,7 +9,7 @@ class ChangeDetector implements Serializable {
     }
 
     static List<String> resolve(def steps, Map cfg) {
-        // all / auto: bỏ media-worker optional cho đến khi có Dockerfile
+        // all / auto: build mọi service đã khai báo (không optional)
         def required = PipelineConfig.SERVICES.findAll { k, v -> !v.optional }.keySet().sort() as List
         def allKnown = PipelineConfig.SERVICES.keySet().sort() as List
 

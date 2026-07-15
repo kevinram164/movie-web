@@ -1,0 +1,48 @@
+{{- if .Values.mediaWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-worker
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: media-worker
+spec:
+  replicas: {{ .Values.mediaWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cinehome
+      app.kubernetes.io/component: media-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cinehome
+        app.kubernetes.io/component: media-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: media-worker
+          image: "{{ .Values.mediaWorker.image.repository }}:{{ .Values.mediaWorker.image.tag }}"
+          imagePullPolicy: {{ .Values.mediaWorker.image.pullPolicy }}
+          env:
+            {{- range $k, $v := .Values.mediaWorker.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.mediaWorker.resources | nindent 12 }}
+          volumeMounts:
+            - name: work
+              mountPath: /tmp/cinehome-work
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: work
+          emptyDir:
+            sizeLimit: {{ .Values.mediaWorker.workVolumeSize | default "4Gi" }}
+{{- end }}

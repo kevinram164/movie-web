@@ -302,7 +302,27 @@ Mặc định lab trong `deploy/minio/values.yaml`:
 
 ---
 
-## Bước G — Đổ phim từ Windows lên MinIO
+## Bước G — Đổ phim (upload + convert)
+
+Có **hai cách**:
+
+### G.A — Trên web (khuyến nghị): Upload + convert trên cluster
+
+1. Sync Argo để có `media-worker` + API mới (Redis queue).  
+2. Mở **https://cinehome.apps.ocp01.npd.co/admin**  
+3. Chọn series / season → chọn tập (hoặc tạo tập mới)  
+4. Chọn file `.mp4` (+ `.srt` tuỳ chọn) → **Upload + convert**  
+5. Browser upload qua `/api` → MinIO bucket `raw/` → Redis → `media-worker` ffmpeg → `movies/`  
+
+Status tập: `UPLOADING` → `PROCESSING` → `READY` (hoặc `FAILED`).
+
+Kiểm tra worker:
+
+```bash
+oc -n npd-movie logs -l app.kubernetes.io/component=media-worker -f
+```
+
+### G.B — Offline trên Windows (ffmpeg local)
 
 File trên ổ `D:\` chỉ cần **`.mp4` + `.srt`**. Script sẽ convert HLS rồi upload.
 
@@ -374,9 +394,9 @@ API khi start seed **3 series** với một ít tập demo (không đủ 13 tậ
 | Tình huống | Cách xử lý |
 |------------|------------|
 | Upload đúng `s01e01`… các tập đã seed | Web phát được ngay |
-| Upload `s01e12` nhưng DB chưa có episode | Thêm episode vào seed / gọi API tạo (sẽ bổ sung admin sau) hoặc mình mở rộng seed cho đủ season |
+| Upload `s01e12` nhưng DB chưa có episode | Trang **/admin** → tạo tập mới rồi upload, hoặc mở rộng seed |
 
-Hiện tại: ưu tiên upload các tập đã có trong seed trước (`s01e01`–`s01e04`, `s02e…` tùy franchise), rồi mở rộng catalog.
+Hiện tại: ưu tiên **/admin** để tạo tập thiếu rồi upload; seed chỉ có vài tập demo.
 
 ---
 
@@ -444,14 +464,16 @@ oc get application -n argocd | findstr cinehome
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc v2 (Node/Kafka) — roadmap |
 | [jenkins-shared-library/README.md](./jenkins-shared-library/README.md) | CI `cinehome` |
 | [scripts/transcode-upload-season.ps1](./scripts/transcode-upload-season.ps1) | Upload season từ Windows |
+| Admin UI | https://cinehome.apps.ocp01.npd.co/admin |
+| `apps/media-worker` | Redis + ffmpeg convert trên cluster |
 
 ---
 
 ## Kết quả mong đợi “xong”
 
-1. `oc get pods -n npd-movie` → `movie-api`, `movie-web` Running  
+1. `oc get pods -n npd-movie` → `movie-api`, `movie-web`, `media-worker` Running  
 2. `oc get pods -n minio` → MinIO Running  
 3. Trình duyệt mở CineHome thấy 3 series  
-4. Sau upload X-Men S01E01 → bấm tập → có tiếng/hình HLS  
+4. Mở **/admin** → upload 1 tập thử → logs `media-worker` → xem tập READY
 
 Nếu bạn báo đang kẹt **bước nào** (B/C/D/F/G), gửi `oc get pods` / log / screenshot ArgoCD để xử lý tiếp.

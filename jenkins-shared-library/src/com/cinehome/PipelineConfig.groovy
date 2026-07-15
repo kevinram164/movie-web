@@ -17,14 +17,12 @@ class PipelineConfig implements Serializable {
             watchPath   : 'phim-web-interface',
             snapshotMode: 'time',
         ],
-        // v2 event-driven (NestJS worker) — BUILD_TARGET sẵn khi thêm code
         'media-worker': [
             dockerfile  : 'Dockerfile',
             context     : 'apps/media-worker',
             helmKey     : 'mediaWorker',
             watchPath   : 'apps/media-worker',
             snapshotMode: 'full',
-            optional    : true,
         ],
     ]
 

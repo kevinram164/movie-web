@@ -114,6 +114,9 @@ export default function SeriesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-semibold">{ep.title}</h3>
                           <span className="text-xs text-muted-foreground">{ep.duration_minutes}p</span>
+                          {ep.status && ep.status !== "READY" && ep.status !== "PENDING" && (
+                            <span className="text-xs text-primary">{ep.status}</span>
+                          )}
                         </div>
                         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{ep.description}</p>
                       </div>

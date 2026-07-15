@@ -17,8 +17,8 @@ movieApi:
       cpu: 50m
       memory: 128Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
   env:
     DATABASE_URL: "postgresql+psycopg2://movie:movie@postgres-ha-postgresql.postgres.svc.cluster.local:5432/movie"
     MINIO_ENDPOINT: "minio.minio.svc.cluster.local:9000"
@@ -27,7 +27,10 @@ movieApi:
     MINIO_SECURE: "false"
     MINIO_BUCKET_MOVIES: "movies"
     MINIO_BUCKET_POSTERS: "posters"
+    MINIO_BUCKET_RAW: "raw"
     MINIO_PUBLIC_URL: "https://minio-api-minio.apps.ocp01.npd.co"
+    REDIS_URL: "redis://:ChangeMeRedis2026!@redis-ha-master.redis.svc.cluster.local:6379/0"
+    MEDIA_QUEUE: "cinehome:media:jobs"
     CORS_ORIGINS: "https://cinehome.apps.ocp01.npd.co,*"
     SEED_DEMO_DATA: "true"
 
@@ -50,3 +53,30 @@ movieWeb:
     limits:
       cpu: 500m
       memory: 512Mi
+
+mediaWorker:
+  enabled: true
+  replicaCount: 1
+  workVolumeSize: 4Gi
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  env:
+    DATABASE_URL: "postgresql+psycopg2://movie:movie@postgres-ha-postgresql.postgres.svc.cluster.local:5432/movie"
+    MINIO_ENDPOINT: "minio.minio.svc.cluster.local:9000"
+    MINIO_ACCESS_KEY: "minioadmin"
+    MINIO_SECRET_KEY: "minioadmin"
+    MINIO_SECURE: "false"
+    MINIO_BUCKET_MOVIES: "movies"
+    MINIO_BUCKET_RAW: "raw"
+    REDIS_URL: "redis://:ChangeMeRedis2026!@redis-ha-master.redis.svc.cluster.local:6379/0"
+    MEDIA_QUEUE: "cinehome:media:jobs"
+    WORK_DIR: "/tmp/cinehome-work"

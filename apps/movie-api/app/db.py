@@ -75,6 +75,11 @@ class Episode(Base):
     duration_minutes: Mapped[int] = mapped_column(Integer, default=22)
     hls_key: Mapped[str] = mapped_column(String(512), default="")
     poster_key: Mapped[str] = mapped_column(String(512), default="")
+    # PENDING | UPLOADING | PROCESSING | READY | FAILED
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    raw_key: Mapped[str] = mapped_column(String(512), default="")
+    subtitle_raw_key: Mapped[str] = mapped_column(String(512), default="")
+    error_message: Mapped[str] = mapped_column(Text, default="")
 
     season: Mapped["Season"] = relationship(back_populates="episodes")
 
@@ -85,6 +90,25 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    _migrate_episode_columns()
+
+
+def _migrate_episode_columns() -> None:
+    """Thêm cột mới nếu DB đã tạo trước đó (Postgres)."""
+    from sqlalchemy import text
+
+    alters = [
+        "ALTER TABLE episodes ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'PENDING'",
+        "ALTER TABLE episodes ADD COLUMN IF NOT EXISTS raw_key VARCHAR(512) DEFAULT ''",
+        "ALTER TABLE episodes ADD COLUMN IF NOT EXISTS subtitle_raw_key VARCHAR(512) DEFAULT ''",
+        "ALTER TABLE episodes ADD COLUMN IF NOT EXISTS error_message TEXT DEFAULT ''",
+    ]
+    try:
+        with engine.begin() as conn:
+            for stmt in alters:
+                conn.execute(text(stmt))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[warn] migrate episodes: {exc}")
 
 
 def get_db():
