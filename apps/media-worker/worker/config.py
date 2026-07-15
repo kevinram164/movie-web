@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     minio_bucket_raw: str = "raw"
 
     redis_url: str = ""
+    redis_sentinel_master: str = "mymaster"
+    redis_sentinel_port: int = 26379
 
     media_queue: str = "cinehome:media:jobs"
 

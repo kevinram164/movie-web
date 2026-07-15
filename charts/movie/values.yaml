@@ -31,6 +31,8 @@ movieApi:
     MINIO_BUCKET_RAW: "raw"
     MINIO_PUBLIC_URL: "https://minio-api-minio.apps.ocp01.npd.co"
     MEDIA_QUEUE: "cinehome:media:jobs"
+    REDIS_SENTINEL_MASTER: "mymaster"
+    REDIS_SENTINEL_PORT: "26379"
     CORS_ORIGINS: "https://cinehome.apps.ocp01.npd.co,*"
     SEED_DEMO_DATA: "true"
   # Keys lấy từ appSecretName
@@ -82,6 +84,8 @@ mediaWorker:
     MINIO_BUCKET_RAW: "raw"
     MEDIA_QUEUE: "cinehome:media:jobs"
     WORK_DIR: "/tmp/cinehome-work"
+    REDIS_SENTINEL_MASTER: "mymaster"
+    REDIS_SENTINEL_PORT: "26379"
   secretEnvKeys:
     - DATABASE_URL
     - REDIS_URL

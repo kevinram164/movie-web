@@ -2,7 +2,6 @@ from datetime import timedelta
 from urllib.parse import urlparse
 
 from minio import Minio
-from minio.corsconfig import CORSRule, CorsConfig
 
 from app.config import settings
 
@@ -38,26 +37,6 @@ def ensure_buckets(client: Minio | None = None) -> None:
     ):
         if not client.bucket_exists(bucket):
             client.make_bucket(bucket)
-    _ensure_raw_cors(client)
-
-
-def _ensure_raw_cors(client: Minio) -> None:
-    """Cho phép browser PUT trực tiếp lên bucket raw (presigned)."""
-    try:
-        cfg = CorsConfig(
-            [
-                CORSRule(
-                    allowed_origins=["*"],
-                    allowed_methods=["GET", "PUT", "HEAD", "POST"],
-                    allowed_headers=["*"],
-                    expose_headers=["ETag", "x-amz-request-id"],
-                    max_age_seconds=3600,
-                )
-            ]
-        )
-        client.set_bucket_cors(settings.minio_bucket_raw, cfg)
-    except Exception as exc:  # noqa: BLE001
-        print(f"[warn] minio CORS raw: {exc}")
 
 
 def put_fileobj(

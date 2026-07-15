@@ -4,16 +4,19 @@ import time
 import traceback
 from pathlib import Path
 
-import redis
-
 from worker.config import settings
 from worker.db import set_episode_status
 from worker.minio_ops import download_object, upload_dir
+from worker.redis_client import get_redis_client
 from worker.transcode import transcode_to_hls
 
 
-def get_redis() -> redis.Redis:
-    return redis.from_url(settings.redis_url, decode_responses=True)
+def get_redis():
+    return get_redis_client(
+        settings.redis_url,
+        sentinel_master=settings.redis_sentinel_master,
+        sentinel_port=settings.redis_sentinel_port,
+    )
 
 
 def process_job(job: dict) -> None:

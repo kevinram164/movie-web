@@ -1,12 +1,15 @@
 import json
 
-import redis
-
 from app.config import settings
+from app.redis_client import get_redis_client
 
 
-def get_redis() -> redis.Redis:
-    return redis.from_url(settings.redis_url, decode_responses=True)
+def get_redis():
+    return get_redis_client(
+        settings.redis_url,
+        sentinel_master=settings.redis_sentinel_master,
+        sentinel_port=settings.redis_sentinel_port,
+    )
 
 
 def enqueue_media_job(payload: dict) -> None:

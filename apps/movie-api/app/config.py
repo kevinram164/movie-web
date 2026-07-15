@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     upload_url_ttl: int = 7200
 
     redis_url: str = ""
+    # Bitnami Redis Sentinel — master name mặc định mymaster (tránh ReadOnlyError trên replica)
+    redis_sentinel_master: str = "mymaster"
+    redis_sentinel_port: int = 26379
 
     media_queue: str = "cinehome:media:jobs"
 
