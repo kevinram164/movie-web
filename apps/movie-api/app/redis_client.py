@@ -26,16 +26,15 @@ def get_redis_client(
     *,
     sentinel_master: str = "",
     sentinel_port: int = 26379,
+    socket_timeout: float = 30.0,
+    socket_connect_timeout: float = 5.0,
 ) -> redis.Redis:
-    """
-    Nếu sentinel_master set (vd mymaster) → kết nối master qua Sentinel.
-    Service redis-ha:6379 round-robin cả replica → BRPOP/LPUSH bị ReadOnlyError.
-    """
     host, _port, password, db = _parse_url(redis_url)
     if sentinel_master:
         sentinel = Sentinel(
             [(host, sentinel_port)],
-            socket_timeout=5,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=socket_connect_timeout,
             password=password,
             sentinel_kwargs={"password": password} if password else {},
         )
@@ -44,6 +43,12 @@ def get_redis_client(
             password=password,
             db=db,
             decode_responses=True,
-            socket_timeout=5,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=socket_connect_timeout,
         )
-    return redis.from_url(redis_url, decode_responses=True)
+    return redis.from_url(
+        redis_url,
+        decode_responses=True,
+        socket_timeout=socket_timeout,
+        socket_connect_timeout=socket_connect_timeout,
+    )

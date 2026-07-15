@@ -4,6 +4,8 @@ import time
 import traceback
 from pathlib import Path
 
+import redis
+
 from worker.config import settings
 from worker.db import set_episode_status
 from worker.minio_ops import download_object, upload_dir
@@ -78,10 +80,32 @@ def process_job(job: dict) -> None:
 
 def main() -> None:
     Path(settings.work_dir).mkdir(parents=True, exist_ok=True)
+    print(
+        f"[media-worker] queue={settings.media_queue} "
+        f"sentinel={settings.redis_sentinel_master or 'off'}"
+    )
     r = get_redis()
-    print(f"[media-worker] queue={settings.media_queue} redis ok")
+    print("[media-worker] redis master ok")
     while True:
-        item = r.brpop(settings.media_queue, timeout=5)
+        try:
+            item = r.brpop(settings.media_queue, timeout=5)
+        except (redis.exceptions.TimeoutError, TimeoutError, OSError) as exc:
+            # Queue trống / transient — reconnect rồi tiếp
+            print(f"[warn] brpop: {exc}; reconnect")
+            try:
+                r = get_redis()
+            except Exception as rexc:  # noqa: BLE001
+                print(f"[warn] redis reconnect failed: {rexc}")
+                time.sleep(2)
+            continue
+        except redis.exceptions.ConnectionError as exc:
+            print(f"[warn] redis connection: {exc}; reconnect")
+            time.sleep(2)
+            try:
+                r = get_redis()
+            except Exception:  # noqa: BLE001
+                pass
+            continue
         if not item:
             continue
         _, payload = item
@@ -93,7 +117,6 @@ def main() -> None:
         try:
             process_job(job)
         except Exception:  # noqa: BLE001
-            # Đã set FAILED trong process_job; tiếp tục job kế
             continue
 
 
