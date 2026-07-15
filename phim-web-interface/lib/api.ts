@@ -88,9 +88,12 @@ export function fetchEpisode(id: number | string) {
 }
 
 export function fetchEpisodeStream(id: number | string) {
-  return request<{ hls_url: string; expires_in: number; episode_id: number }>(
-    `/api/episodes/${id}/stream`,
-  )
+  return request<{
+    hls_url: string
+    subtitle_url?: string
+    expires_in: number
+    episode_id: number
+  }>(`/api/episodes/${id}/stream`)
 }
 
 export function createEpisode(

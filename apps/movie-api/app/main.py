@@ -51,6 +51,14 @@ class StreamOut(BaseModel):
     expires_in: int
     episode_id: int | None = None
     movie_id: int | None = None
+    subtitle_url: str = ""
+
+
+def subtitle_key_from_hls(hls_key: str) -> str:
+    """movies/.../master.m3u8 → same folder subs.vi.vtt"""
+    if "/" not in hls_key:
+        return "subs.vi.vtt"
+    return hls_key.rsplit("/", 1)[0] + "/subs.vi.vtt"
 
 
 class MovieCreate(BaseModel):
@@ -323,7 +331,13 @@ def stream_episode(episode_id: int, db: Session = Depends(get_db)):
     if not ep.hls_key:
         raise HTTPException(status_code=404, detail="HLS not ready — upload/convert trước")
     url = public_object_url(settings.minio_bucket_movies, ep.hls_key)
-    return StreamOut(episode_id=ep.id, hls_url=url, expires_in=settings.stream_url_ttl)
+    sub_url = public_object_url(settings.minio_bucket_movies, subtitle_key_from_hls(ep.hls_key))
+    return StreamOut(
+        episode_id=ep.id,
+        hls_url=url,
+        subtitle_url=sub_url,
+        expires_in=settings.stream_url_ttl,
+    )
 
 
 class EpisodeCreate(BaseModel):
@@ -556,7 +570,13 @@ def stream_movie(movie_id: int, db: Session = Depends(get_db)):
     if not movie.hls_key:
         raise HTTPException(status_code=404, detail="HLS not configured")
     url = public_object_url(settings.minio_bucket_movies, movie.hls_key)
-    return StreamOut(movie_id=movie.id, hls_url=url, expires_in=settings.stream_url_ttl)
+    sub_url = public_object_url(settings.minio_bucket_movies, subtitle_key_from_hls(movie.hls_key))
+    return StreamOut(
+        movie_id=movie.id,
+        hls_url=url,
+        subtitle_url=sub_url,
+        expires_in=settings.stream_url_ttl,
+    )
 
 
 @app.post("/api/movies", response_model=MovieOut, status_code=201)

@@ -79,13 +79,32 @@ foreach ($vid in $videos | Sort-Object Name) {
     $master
   if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed: $($vid.Name)" }
 
-  # Phụ đề .srt cùng tên → .vtt (player browser dùng VTT)
+  # Phụ đề .srt cùng tên → .vtt + gắn vào master.m3u8 (Safari / hls.js)
   $srt = Join-Path $vid.DirectoryName ($vid.BaseName + ".srt")
   if (Test-Path $srt) {
     $vtt = Join-Path $work "subs.vi.vtt"
     & ffmpeg -hide_banner -loglevel error -y -i $srt $vtt
     if ($LASTEXITCODE -eq 0) {
-      Write-Host "     + phụ đề → subs.vi.vtt"
+      $subsPl = Join-Path $work "subs.vi.m3u8"
+      @"
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:99999
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:99999.0,
+subs.vi.vtt
+#EXT-X-ENDLIST
+"@ | Set-Content -Path $subsPl -Encoding utf8
+
+      $masterText = Get-Content -Raw $master
+      if ($masterText -notmatch 'TYPE=SUBTITLES') {
+        $media = '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Vietnamese",DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,LANGUAGE="vi",URI="subs.vi.m3u8"'
+        $masterText = $masterText -replace '(#EXTM3U\r?\n)', "`$1$media`n"
+        $masterText = $masterText -replace '(#EXT-X-STREAM-INF:[^\r\n]+)', '$1,SUBTITLES="subs"'
+        [System.IO.File]::WriteAllText($master, $masterText)
+      }
+      Write-Host "     + phụ đề → subs.vi.vtt (+ master.m3u8)"
     }
   }
 
