@@ -2,13 +2,13 @@
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: latest
+    tag: 21ad1a3
     pullPolicy: Always
 
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: latest
+    tag: 21ad1a3
     pullPolicy: Always
 
 mediaWorker:
