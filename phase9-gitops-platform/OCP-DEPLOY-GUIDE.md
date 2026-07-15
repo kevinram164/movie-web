@@ -8,6 +8,7 @@ Repo: `https://github.com/kevinram164/movie-web.git` (branch **`main`**)
 
 | Doc | Mục đích |
 |-----|----------|
+| [../DEPLOY.md](../DEPLOY.md) | **Hướng dẫn triển khai CineHome đầy đủ (khuyên dùng)** |
 | [README.md](./README.md) | Quick start giai đoạn |
 | [PHASE9.md](./PHASE9.md) | Tổng quan namespace / luồng |
 | [OCP-ARCHITECTURE.md](./OCP-ARCHITECTURE.md) | Sơ đồ Route / CI |

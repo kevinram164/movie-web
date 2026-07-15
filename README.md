@@ -1,9 +1,11 @@
 # CineHome — web phim trên OpenShift + MinIO + GitOps
 
+**Hướng dẫn triển khai đầy đủ (OCP):** **[DEPLOY.md](./DEPLOY.md)** ← bắt đầu từ đây.
+
 Stack xem phim tại nhà. Platform GitOps: [`phase9-gitops-platform/`](./phase9-gitops-platform/).  
 UI: [`phim-web-interface/`](./phim-web-interface/) (Next.js) · API: [`apps/movie-api/`](./apps/movie-api/).
 
-Kiến trúc: [ARCHITECTURE.md](./ARCHITECTURE.md) · Deploy: [phase9-gitops-platform/OCP-DEPLOY-GUIDE.md](./phase9-gitops-platform/OCP-DEPLOY-GUIDE.md)
+Kiến trúc roadmap: [ARCHITECTURE.md](./ARCHITECTURE.md) · Platform ngắn: [phase9-gitops-platform/OCP-DEPLOY-GUIDE.md](./phase9-gitops-platform/OCP-DEPLOY-GUIDE.md)
 
 ## Catalog đã seed
 
