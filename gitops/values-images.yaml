@@ -2,7 +2,7 @@
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: dfabe7d
+    tag: 06a17ba
     pullPolicy: Always
 
 movieWeb:
