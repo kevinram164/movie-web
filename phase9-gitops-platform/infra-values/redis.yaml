@@ -1,0 +1,19 @@
+# Redis — CineHome cache/session (Bitnami), ns redis
+architecture: standalone
+
+auth:
+  enabled: true
+  password: "ChangeMeRedis2026!"
+
+master:
+  persistence:
+    enabled: true
+    storageClass: nfs-csi
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+replica:
+  replicaCount: 0

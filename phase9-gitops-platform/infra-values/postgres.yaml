@@ -1,0 +1,21 @@
+# Postgres — CineHome (Bitnami), ns postgres, storage nfs-csi
+architecture: standalone
+
+auth:
+  username: movie
+  password: movie
+  database: movie
+  postgresPassword: "ChangeMePostgresAdmin2026!"
+
+primary:
+  persistence:
+    enabled: true
+    storageClass: nfs-csi
+    size: 20Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

@@ -1,0 +1,19 @@
+# Image tags — CI (cinehomePipeline / Kaniko) cập nhật trên nhánh main
+movieApi:
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
+    tag: latest
+    pullPolicy: Always
+
+movieWeb:
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
+    tag: latest
+    pullPolicy: Always
+
+# v2 — media-worker (Kafka consumer); chỉ bump khi service tồn tại
+mediaWorker:
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
+    tag: latest
+    pullPolicy: Always

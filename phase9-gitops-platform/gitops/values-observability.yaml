@@ -1,0 +1,20 @@
+# Observability — CineHome services
+global:
+  otel:
+    enabled: true
+    endpoint: http://otel-collector.observability.svc.cluster.local:4317
+
+movieApi:
+  otel:
+    serviceName: movie-api
+
+movieWeb:
+  otel:
+    serviceName: movie-web
+
+mediaWorker:
+  otel:
+    serviceName: media-worker
+
+linkerd:
+  inject: enabled

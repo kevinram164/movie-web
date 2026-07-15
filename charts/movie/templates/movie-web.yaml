@@ -1,0 +1,72 @@
+{{- if .Values.movieWeb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-web
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-web
+spec:
+  replicas: {{ .Values.movieWeb.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cinehome
+      app.kubernetes.io/component: movie-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cinehome
+        app.kubernetes.io/component: movie-web
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: movie-web
+          image: "{{ .Values.movieWeb.image.repository }}:{{ .Values.movieWeb.image.tag }}"
+          imagePullPolicy: {{ .Values.movieWeb.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            {{- range $k, $v := .Values.movieWeb.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.movieWeb.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-web
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-web
+spec:
+  selector:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-web
+  ports:
+    - name: http
+      port: {{ .Values.movieWeb.service.port }}
+      targetPort: http
+{{- end }}

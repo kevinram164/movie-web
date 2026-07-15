@@ -1,0 +1,52 @@
+namespace: npd-movie
+
+imagePullSecrets:
+  - name: harbor-pull-creds
+
+movieApi:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
+    tag: latest
+    pullPolicy: Always
+  service:
+    port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    DATABASE_URL: "postgresql+psycopg2://movie:movie@postgres-ha-postgresql.postgres.svc.cluster.local:5432/movie"
+    MINIO_ENDPOINT: "minio.minio.svc.cluster.local:9000"
+    MINIO_ACCESS_KEY: "minioadmin"
+    MINIO_SECRET_KEY: "minioadmin"
+    MINIO_SECURE: "false"
+    MINIO_BUCKET_MOVIES: "movies"
+    MINIO_BUCKET_POSTERS: "posters"
+    MINIO_PUBLIC_URL: "https://minio-api-minio.apps.ocp01.npd.co"
+    CORS_ORIGINS: "https://cinehome.apps.ocp01.npd.co,*"
+    SEED_DEMO_DATA: "true"
+
+movieWeb:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
+    tag: latest
+    pullPolicy: Always
+  service:
+    port: 8080
+  env:
+    API_PROXY_TARGET: "http://movie-api:8080"
+    PORT: "8080"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

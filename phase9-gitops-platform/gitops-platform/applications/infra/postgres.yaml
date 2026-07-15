@@ -1,0 +1,39 @@
+# Postgres — CineHome DB (Bitnami), ns postgres
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-postgres
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: cinehome-platform
+  sources:
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: postgresql
+      targetRevision: 15.5.32
+      helm:
+        releaseName: postgres-ha
+        valueFiles:
+          - $values/phase9-gitops-platform/infra-values/postgres.yaml
+        values: |
+          global:
+            defaultStorageClass: nfs-csi
+          primary:
+            persistence:
+              storageClass: nfs-csi
+    - repoURL: https://github.com/kevinram164/movie-web.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: true

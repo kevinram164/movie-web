@@ -1,0 +1,53 @@
+# HashiCorp Vault — dev-ocp: https://vault-platform.apps.ocp01.npd.co (dev mode, lab only)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-vault
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: phase9-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: cinehome-platform
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.28.1
+    helm:
+      releaseName: vault
+      parameters:
+        - name: injector.enabled
+          value: "false"
+        - name: global.openshift
+          value: "true"
+      values: |
+        # OCP: image Red Hat UBI (-ubi suffix); injector tắt (Phase 9 dùng ESO)
+        global:
+          openshift: true
+        injector:
+          enabled: false
+        server:
+          ha:
+            enabled: false
+          dev:
+            enabled: true
+            devRootToken: "root"
+          image:
+            repository: registry.connect.redhat.com/hashicorp/vault
+            tag: "1.17.2-ubi"
+          readinessProbe:
+            path: "/v1/sys/health?uninitcode=204"
+          ingress:
+            enabled: false
+        ui:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

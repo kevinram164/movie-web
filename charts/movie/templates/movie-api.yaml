@@ -1,0 +1,72 @@
+{{- if .Values.movieApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-api
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-api
+spec:
+  replicas: {{ .Values.movieApi.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cinehome
+      app.kubernetes.io/component: movie-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cinehome
+        app.kubernetes.io/component: movie-api
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: movie-api
+          image: "{{ .Values.movieApi.image.repository }}:{{ .Values.movieApi.image.tag }}"
+          imagePullPolicy: {{ .Values.movieApi.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            {{- range $k, $v := .Values.movieApi.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.movieApi.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-api
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-api
+spec:
+  selector:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: movie-api
+  ports:
+    - name: http
+      port: {{ .Values.movieApi.service.port }}
+      targetPort: http
+{{- end }}

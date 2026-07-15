@@ -1,0 +1,43 @@
+# MinIO API — public object URL (HLS + posters)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: minio-api
+  namespace: minio
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: minio
+spec:
+  host: minio-api-minio.apps.ocp01.npd.co
+  to:
+    kind: Service
+    name: minio
+    weight: 100
+  port:
+    targetPort: minio-api
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+---
+# MinIO Console
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: minio-console
+  namespace: minio
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: minio-console
+spec:
+  host: minio-console-minio.apps.ocp01.npd.co
+  to:
+    kind: Service
+    name: minio-console
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

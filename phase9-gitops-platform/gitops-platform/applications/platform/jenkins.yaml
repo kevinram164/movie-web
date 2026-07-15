@@ -1,0 +1,110 @@
+# Jenkins — dev-ocp: UI https://jenkins-platform.apps.ocp01.npd.co
+# Admin: Vault secret/platform/jenkins → ESO → Helm existingSecret
+# Pipeline CI: agent SA jenkins-kaniko đọc trực tiếp Vault (platform/harbor, platform/github)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-jenkins
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: phase9-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: cinehome-platform
+  source:
+    repoURL: https://charts.jenkins.io
+    chart: jenkins
+    targetRevision: 5.7.27
+    helm:
+      releaseName: jenkins
+      values: |
+        persistence:
+          enabled: true
+          storageClass: nfs-csi
+          size: 8Gi
+          accessMode: ReadWriteOnce
+        controller:
+          image:
+            registry: docker.io
+            repository: jenkins/jenkins
+            tag: "lts-jdk17"
+            pullPolicy: Always
+          admin:
+            existingSecret: jenkins-platform-credentials
+            userKey: jenkins-admin-user
+            passwordKey: jenkins-admin-password
+          jenkinsUrl: https://jenkins-platform.apps.ocp01.npd.co/
+          # false: dependency lấy bản tối thiểu tương thích (không kéo :latest lẫn lộn)
+          installLatestPlugins: false
+          # Pin version — KHÔNG dùng id "stage-view" (404). UI Stage View = pipeline-stage-view (optional).
+          installPlugins:
+            - kubernetes:4437.v3a_18554d3f32
+            - workflow-aggregator:608.v67378e9d3db_1
+            - pipeline-model-api:2.2255.v56a_15e805f12
+            - pipeline-model-definition:2.2255.v56a_15e805f12
+            - pipeline-model-extensions:2.2255.v56a_15e805f12
+            - workflow-multibranch:821.vc3b_4ea_780798
+            - git:5.10.1
+            - configuration-as-code:2100.vb_fd699d2a_09c
+            - pipeline-groovy-lib:798.v5cc688825312
+            - durable-task:686.v80ff80875b_82
+          additionalPlugins: []
+          overwritePlugins: true
+          overwritePluginsFromImage: false
+          initializeOnce: false
+          podSecurityContextOverride:
+            # UID do OpenShift cấp theo openshift.io/sa.scc.uid-range (ns platform)
+            # Sau sync: scripts/namespace-scc-setup.sh platform
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+          containerSecurityContext:
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+          # Đổi javaOpts → Argo sync STS → pod restart (đúng hành vi). Không phải crash Kaniko.
+          javaOpts: >-
+            -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=86400
+            -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.USE_BINARY_WRAPPER=true
+          initContainerResources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          JCasC:
+            defaultConfig: true
+            configScripts:
+              cinehome-shared-library: |
+                unclassified:
+                  globalLibraries:
+                    libraries:
+                      - name: "cinehome"
+                        defaultVersion: "main"
+                        retriever:
+                          modernSCM:
+                            libraryPath: "jenkins-shared-library"
+                            scm:
+                              git:
+                                remote: "https://github.com/kevinram164/movie-web.git"
+          ingress:
+            enabled: false
+        agent:
+          enabled: true
+          kubernetes:
+            namespace: platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

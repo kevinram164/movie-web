@@ -1,0 +1,39 @@
+# Redis — CineHome cache (Bitnami), ns redis
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-redis
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: redis
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: cinehome-platform
+  sources:
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: redis
+      targetRevision: 20.6.2
+      helm:
+        releaseName: redis-ha
+        valueFiles:
+          - $values/phase9-gitops-platform/infra-values/redis.yaml
+        values: |
+          global:
+            defaultStorageClass: nfs-csi
+          master:
+            persistence:
+              storageClass: nfs-csi
+    - repoURL: https://github.com/kevinram164/movie-web.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redis
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: true

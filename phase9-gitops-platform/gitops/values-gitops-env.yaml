@@ -1,0 +1,20 @@
+# Biến môi trường GitOps — CineHome
+gitops:
+  repoUrl: https://github.com/kevinram164/movie-web.git
+  branch: main
+  valuesImagesPath: gitops/values-images.yaml
+
+harbor:
+  host: harbor-platform.apps.ocp01.npd.co
+  project: movie-web
+
+jenkins:
+  namespace: platform
+  sharedLibrary: cinehome
+  kanikoImage: gcr.io/kaniko-project/executor:v1.23.2
+
+ci:
+  watchPaths:
+    - apps/**
+    - charts/movie/**
+    - gitops/values-images.yaml

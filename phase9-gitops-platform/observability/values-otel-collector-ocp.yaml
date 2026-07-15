@@ -1,0 +1,35 @@
+# OTEL Collector → Coroot (OCP)
+mode: deployment
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  exporters:
+    otlp/coroot:
+      endpoint: coroot.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        exporters: [otlp/coroot]
+      metrics:
+        receivers: [otlp]
+        exporters: [otlp/coroot]
+      logs:
+        receivers: [otlp]
+        exporters: [otlp/coroot]
+
+resources:
+  limits:
+    memory: 512Mi

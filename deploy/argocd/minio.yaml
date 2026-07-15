@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-minio
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: minio
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: cinehome-platform
+  sources:
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: minio
+      targetRevision: 14.8.0
+      helm:
+        releaseName: minio
+        valueFiles:
+          - $values/deploy/minio/values.yaml
+    - repoURL: https://github.com/kevinram164/movie-web.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-bucket-policy
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: cinehome-platform
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: deploy/minio
+    directory:
+      include: bucket-policy-job.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true

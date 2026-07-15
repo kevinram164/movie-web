@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: movie-db-init
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: cinehome-platform
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: deploy/movie
+    directory:
+      include: db-init-job.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cinehome
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: app
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: cinehome-platform
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: charts/movie
+    helm:
+      releaseName: cinehome
+      valueFiles:
+        - values.yaml
+        - ../../gitops/values-images.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: npd-movie
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: true
