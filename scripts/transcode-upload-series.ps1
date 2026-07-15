@@ -40,6 +40,7 @@ param(
   [switch]$SkipUpload,
   [switch]$SkipExisting,
   [switch]$SyncCatalog,
+  [switch]$Insecure,
   [switch]$WhatIf,
   [string[]]$OnlyFolders = @()
 )
@@ -107,6 +108,7 @@ foreach ($dir in $folders) {
   if ($SkipUpload) { $args.SkipUpload = $true }
   if ($SkipExisting) { $args.SkipExisting = $true }
   if ($SyncCatalog) { $args.SyncCatalog = $true }
+  if ($Insecure) { $args.Insecure = $true }
   if ($WhatIf) { $args.WhatIf = $true }
 
   & $seasonScript @args

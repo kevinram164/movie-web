@@ -23,6 +23,7 @@ param(
   [switch]$SkipUpload,
   [switch]$SkipExisting,
   [switch]$SyncCatalog,
+  [switch]$Insecure,
   [switch]$WhatIf
 )
 
@@ -69,8 +70,13 @@ function Ensure-CatalogEpisode(
   }
 }
 
+function Get-McArgs {
+  if ($Insecure) { return @("--insecure") }
+  return @()
+}
+
 function Test-MinioObject([string]$Alias, [string]$BucketName, [string]$Key) {
-  & mc stat "$Alias/$BucketName/$Key" 2>$null | Out-Null
+  & mc @(Get-McArgs) stat "$Alias/$BucketName/$Key" 2>$null | Out-Null
   return ($LASTEXITCODE -eq 0)
 }
 
@@ -180,7 +186,7 @@ subs.vi.vtt
   }
 
   $dest = "${MinioAlias}/${Bucket}/${objectPrefix}"
-  & mc mirror --overwrite $work $dest
+  & mc @(Get-McArgs) mirror --overwrite $work $dest
   if ($LASTEXITCODE -ne 0) {
     Write-Warning "mc mirror failed: $dest"
     $fail++
