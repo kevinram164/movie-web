@@ -122,24 +122,24 @@ Chi tiết: [INSTALL-TROUBLESHOOTING.md](./phase9-gitops-platform/environments/d
 
 ## Bước D — Jenkins CI (Kaniko)
 
-### D.1 Shared Library
+### D.1 Shared Library (bắt buộc)
 
-Jenkins → Manage Jenkins → System → **Global Pipeline Libraries** (hoặc JCasC đã cấu hình):
+Nếu build fail: `Could not find any definition of libraries [cinehome]` → chưa đăng ký library.
+
+**Manage Jenkins → System → Global Pipeline Libraries → Add:**
 
 | Field | Value |
 |-------|--------|
 | Name | `cinehome` |
 | Default version | `main` |
 | Retrieval | Modern SCM → Git |
-| Project repo | `https://github.com/kevinram164/movie-web.git` |
-| Library path | `jenkins-shared-library` |
+| Project Repository | `https://github.com/kevinram164/movie-web.git` |
+| Library Path | `jenkins-shared-library` |
+| Credentials | trống nếu repo public |
 
-`Jenkinsfile` root gọi:
+**Save** → chạy lại job.
 
-```groovy
-@Library('cinehome') _
-cinehomePipeline([...])
-```
+`Jenkinsfile` root gọi `@Library('cinehome') _` → `cinehomePipeline([...])`.
 
 ### D.2 Multibranch job
 

@@ -23,18 +23,36 @@ git push → Jenkins Multibranch (Jenkinsfile)
 
 `BUILD_TARGET`: `auto` | `all` | tên service.
 
-## Đăng ký library trên Jenkins
+## Lỗi: `Could not find any definition of libraries [cinehome]`
 
-Modern Shared Library (Modern SCM → Git):
+Jenkins **chưa đăng ký** Global Pipeline Library tên `cinehome`.  
+(JCasC trong repo chỉ có hiệu lực nếu Helm Jenkins sync từ repo này và reload — lab cũ thường vẫn chỉ có `banking-demo`.)
+
+### Cách sửa ngay (UI — ~2 phút)
+
+1. Mở https://jenkins-platform.apps.ocp01.npd.co  
+2. **Manage Jenkins** → **System** (hoặc **Configure System**)  
+3. Kéo tới **Global Pipeline Libraries** → **Add**  
+4. Điền:
 
 | Field | Value |
 |-------|--------|
 | Name | `cinehome` |
 | Default version | `main` |
-| Repo | `https://github.com/kevinram164/movie-web.git` |
-| Library path | `jenkins-shared-library` |
+| Load implicitly | không bắt buộc |
+| Allow default version to be overridden | ✓ |
+| Retrieval method | **Modern SCM** |
+| Source Code Management | **Git** |
+| Project Repository | `https://github.com/kevinram164/movie-web.git` |
+| Credentials | (trống nếu repo public; hoặc GitHub PAT nếu private) |
+| Library Path | `jenkins-shared-library` |
 
-Hoặc thêm vào JCasC Jenkins (tương tự banking-demo).
+5. **Save**  
+6. Chạy lại job Multibranch / Build `main`
+
+### Kiểm tra
+
+Build lại phải qua được dòng `@Library('cinehome') _` và vào stage **Checkout**.
 
 ## Job
 
