@@ -48,6 +48,14 @@ function Get-EpisodeTitle([string]$baseName) {
   return $baseName
 }
 
+function Enable-InsecureTls {
+  # Windows PowerShell 5.1 — tin cert Route OCP self-signed
+  if ($script:CinehomeInsecureTlsDone) { return }
+  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+  $script:CinehomeInsecureTlsDone = $true
+}
+
 function Ensure-CatalogEpisode(
   [string]$Api,
   [string]$Slug,
@@ -55,6 +63,7 @@ function Ensure-CatalogEpisode(
   [int]$Number,
   [string]$Title
 ) {
+  if ($Insecure) { Enable-InsecureTls }
   $uri = "$Api/series/$Slug/seasons/$Season/episodes"
   $body = @{
     title             = $Title
