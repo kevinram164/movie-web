@@ -44,17 +44,24 @@ spec:
               mc mb -p local/raw || true
               mc anonymous set download local/movies
               mc anonymous set download local/posters
-              cat > /tmp/cors.json <<'EOF'
-              {
-                "CORSRules": [{
-                  "AllowedOrigins": ["*"],
-                  "AllowedMethods": ["GET", "HEAD"],
-                  "AllowedHeaders": ["*"],
-                  "ExposeHeaders": ["ETag", "Content-Length", "Content-Type", "Accept-Ranges"],
-                  "MaxAgeSeconds": 3600
-                }]
-              }
+              # Bitnami/legacy: PutBucketCors thường lỗi EOF — CORS set bằng MINIO_API_CORS_ALLOW_ORIGIN trên pod MinIO
+              cat > /tmp/cors.xml <<'EOF'
+              <CORSConfiguration>
+                <CORSRule>
+                  <AllowedOrigin>*</AllowedOrigin>
+                  <AllowedMethod>GET</AllowedMethod>
+                  <AllowedMethod>HEAD</AllowedMethod>
+                  <AllowedMethod>PUT</AllowedMethod>
+                  <AllowedMethod>POST</AllowedMethod>
+                  <AllowedHeader>*</AllowedHeader>
+                  <ExposeHeader>ETag</ExposeHeader>
+                  <MaxAgeSeconds>3600</MaxAgeSeconds>
+                </CORSRule>
+              </CORSConfiguration>
               EOF
-              mc cors set local/movies /tmp/cors.json
-              mc cors set local/posters /tmp/cors.json
+              # bỏ indentation trong file (heredoc bị indent trong YAML)
+              sed -i 's/^[[:space:]]*//' /tmp/cors.xml
+              mc cors set local/movies /tmp/cors.xml 2>/dev/null || echo "(warn) cors movies skipped — dùng MINIO_API_CORS_ALLOW_ORIGIN"
+              mc cors set local/posters /tmp/cors.xml 2>/dev/null || echo "(warn) cors posters skipped"
+              mc cors set local/raw /tmp/cors.xml 2>/dev/null || echo "(warn) cors raw skipped"
               echo "bucket policy + cors ok"

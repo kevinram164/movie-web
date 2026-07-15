@@ -37,3 +37,8 @@ service:
   ports:
     api: 9000
     console: 9001
+
+# Browser HLS / upload từ CineHome (Bitnami MinIO thường không hỗ trợ mc cors set)
+extraEnvVars:
+  - name: MINIO_API_CORS_ALLOW_ORIGIN
+    value: "*"
