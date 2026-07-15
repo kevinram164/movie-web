@@ -227,13 +227,16 @@ OCP đang dùng chung:
 ### E.0 Seed Vault
 
 ```bash
+REDIS_PASSWORD=$(oc -n redis get secret redis-ha -o jsonpath='{.data.redis-password}' | base64 -d)
+
 oc exec -i -n vault vault-0 -- env \
   VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root \
   MOVIE_DB_PASSWORD='Tech1604' \
+  REDIS_PASSWORD="$REDIS_PASSWORD" \
   bash -s < scripts/vault-seed-cinehome-secrets.sh
 ```
 
-`REDIS_URL` mặc định không password: `redis://redis-ha.redis.svc.cluster.local:6379/0`
+Shared Redis **có AUTH** (Secret `redis-ha` / key `redis-password`) — bắt buộc truyền `REDIS_PASSWORD`.
 
 ### E.1 Sync ESO CineHome
 
