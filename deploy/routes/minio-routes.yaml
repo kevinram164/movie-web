@@ -20,7 +20,7 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
   wildcardPolicy: None
 ---
-# MinIO Console
+# MinIO Console — Bitnami: cùng Service `minio`, port console (không có svc minio-console riêng)
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -33,10 +33,10 @@ spec:
   host: minio-console-minio.apps.ocp01.npd.co
   to:
     kind: Service
-    name: minio-console
+    name: minio
     weight: 100
   port:
-    targetPort: http
+    targetPort: minio-console
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
