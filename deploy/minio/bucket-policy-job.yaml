@@ -16,8 +16,12 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: mc
-          image: docker.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+          image: docker.io/minio/mc:latest
           env:
+            - name: HOME
+              value: /tmp
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
             - name: MINIO_ROOT_USER
               valueFrom:
                 secretKeyRef:
@@ -33,6 +37,7 @@ spec:
             - -c
             - |
               set -e
+              mkdir -p /tmp/.mc
               mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
               mc mb -p local/movies || true
               mc mb -p local/posters || true
