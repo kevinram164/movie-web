@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Bật Vault Kubernetes auth + role cho Jenkins agent (jenkins-kaniko).
-# Pipeline đọc secret/platform/harbor và secret/platform/github — không Jenkins credential.
+# Pipeline CineHome đọc secret/cinehome/harbor (+ github, giữ platform/* cho lab ngân hàng).
 #
 # Chạy trên bastion (đã oc/kubectl login):
-#   export VAULT_TOKEN=root   # dev/lab — production dùng token có quyền policy write
+#   export VAULT_TOKEN='<token admin>'   # token login Vault UI — không dùng root giả nếu 403
 #   ./environments/dev-ocp/scripts/vault-setup-jenkins-k8s-auth.sh
 set -euo pipefail
 
@@ -48,11 +48,22 @@ vault write auth/kubernetes/config \
   disable_local_ca_jwt=true
 
 vault policy write jenkins-kaniko - <<'POLICY'
+# Banking lab (giữ)
 path \"secret/data/platform/harbor\" {
   capabilities = [\"read\"]
 }
 path \"secret/data/platform/github\" {
   capabilities = [\"read\"]
+}
+# CineHome
+path \"secret/data/cinehome/harbor\" {
+  capabilities = [\"read\"]
+}
+path \"secret/data/cinehome/harbor-pull\" {
+  capabilities = [\"read\"]
+}
+path \"secret/metadata/cinehome/*\" {
+  capabilities = [\"read\", \"list\"]
 }
 POLICY
 
@@ -64,7 +75,7 @@ vault write auth/kubernetes/role/${VAULT_ROLE} \
 
 echo '==> Verify role + secrets exist'
 vault read auth/kubernetes/role/${VAULT_ROLE}
-vault kv get secret/platform/harbor >/dev/null && echo 'OK secret/platform/harbor' || echo 'MISSING secret/platform/harbor — seed trước khi chạy pipeline'
+vault kv get secret/cinehome/harbor >/dev/null && echo 'OK secret/cinehome/harbor' || echo 'MISSING secret/cinehome/harbor — seed trước khi chạy pipeline'
 vault kv get secret/platform/github >/dev/null && echo 'OK secret/platform/github' || echo 'MISSING secret/platform/github — seed trước khi chạy pipeline'
 "
 

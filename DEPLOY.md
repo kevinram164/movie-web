@@ -123,7 +123,44 @@ Chi tiết: [INSTALL-TROUBLESHOOTING.md](./phase9-gitops-platform/environments/d
 
 ## Bước D — Jenkins CI (Kaniko)
 
-### D.1 Shared Library (bắt buộc)
+### D.0 Vault policy cho Jenkins (tránh 403 `cinehome/harbor`)
+
+SA `jenkins-kaniko` login Vault bằng role `jenkins-kaniko`. Policy cũ chỉ cho `platform/harbor` + `platform/github` → đọc `cinehome/harbor` sẽ **HTTP 403**.
+
+Trên bastion (token admin Vault UI):
+
+```bash
+oc exec -it -n vault vault-0 -- sh
+export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_TOKEN='<token-admin>'
+
+vault policy write jenkins-kaniko - <<'EOF'
+path "secret/data/platform/harbor" {
+  capabilities = ["read"]
+}
+path "secret/data/platform/github" {
+  capabilities = ["read"]
+}
+path "secret/data/cinehome/harbor" {
+  capabilities = ["read"]
+}
+path "secret/data/cinehome/harbor-pull" {
+  capabilities = ["read"]
+}
+EOF
+
+vault read sys/policy/jenkins-kaniko
+vault kv get secret/cinehome/harbor
+```
+
+Hoặc chạy lại script (cập nhật policy + role):
+
+```bash
+export VAULT_TOKEN='<token-admin>'
+bash phase9-gitops-platform/environments/dev-ocp/scripts/vault-setup-jenkins-k8s-auth.sh
+```
+
+Xong → **Build lại** Jenkins job.
 
 Nếu build fail: `Could not find any definition of libraries [cinehome]` → chưa đăng ký library.
 
@@ -369,6 +406,7 @@ bash scripts/apply-cinehome.sh
 | Triệu chứng | Việc kiểm |
 |-------------|-----------|
 | Pod `ImagePullBackOff` | Harbor project, `harbor-pull-creds`, TLS trust |
+| Jenkins `Vault read secret/cinehome/harbor HTTP 403` | Policy role `jenkins-kaniko` chưa cho `cinehome/*` — xem mục dưới |
 | `movie-api` CrashLoop | Postgres chưa Ready / sai `DATABASE_URL` / xem `oc logs` |
 | Web mở được nhưng catalog trống | API lỗi — `oc logs deploy/movie-api`; CORS; rewrite Next |
 | Vào tập → player đen | Chưa có HLS trên MinIO đúng key; CORS bucket; Route minio-api |
