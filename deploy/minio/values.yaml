@@ -1,12 +1,23 @@
-# MinIO Bitnami — credentials từ Vault → ESO Secret `minio` (không password trong Git)
+# MinIO Bitnami — khớp OCP lab (bitnamilegacy, giống redis/postgres)
+# Credentials: Vault → ESO Secret `minio` (root-user / root-password)
 mode: standalone
+
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/minio
+  tag: 2025.7.23-debian-12-r5
+  pullPolicy: IfNotPresent
 
 auth:
   existingSecret: minio
   rootUserSecretKey: root-user
   rootPasswordSecretKey: root-password
 
-defaultBuckets: "movies,posters"
+defaultBuckets: "movies,posters,raw"
 
 persistence:
   enabled: true
