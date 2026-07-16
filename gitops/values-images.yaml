@@ -3,17 +3,29 @@
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
+<<<<<<< HEAD
     tag: "c5556c2"
+=======
+    tag: 4700539
+>>>>>>> a1c6c55d055eebd25ffec3f6048634e185d30933
     pullPolicy: Always
 
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
+<<<<<<< HEAD
     tag: "c5556c2"
+=======
+    tag: 4700539
+>>>>>>> a1c6c55d055eebd25ffec3f6048634e185d30933
     pullPolicy: Always
 
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
+<<<<<<< HEAD
     tag: "c5556c2"
+=======
+    tag: 4700539
+>>>>>>> a1c6c55d055eebd25ffec3f6048634e185d30933
     pullPolicy: Always
