@@ -347,6 +347,53 @@ class EpisodeCreate(BaseModel):
     duration_minutes: int = 22
 
 
+class SeriesCreate(BaseModel):
+    slug: str
+    title: str
+    english_title: str = ""
+    description: str = ""
+    year_start: int = 0
+    franchise: str = "x-men"
+    genre: str = "Hoạt hình"
+    poster_key: str = "/movies/poster-1.png"
+    backdrop_key: str = "/movies/hero-backdrop.png"
+    rating: str = "8.5"
+
+
+def _guess_franchise(slug: str) -> str:
+    s = slug.lower()
+    if s.startswith("x-men") or s.startswith("xmen"):
+        return "x-men"
+    if "spider" in s:
+        return "spiderman"
+    if "batman" in s:
+        return "batman"
+    return "other"
+
+
+@app.post("/api/series", response_model=SeriesOut, status_code=201)
+def create_series(body: SeriesCreate, db: Session = Depends(get_db)):
+    exists = db.query(Series).filter(Series.slug == body.slug).first()
+    if exists:
+        raise HTTPException(status_code=409, detail="Series already exists")
+    series = Series(
+        slug=body.slug,
+        title=body.title,
+        english_title=body.english_title or body.title,
+        description=body.description,
+        year_start=body.year_start,
+        franchise=body.franchise or _guess_franchise(body.slug),
+        genre=body.genre,
+        poster_key=body.poster_key,
+        backdrop_key=body.backdrop_key,
+        rating=body.rating,
+    )
+    db.add(series)
+    db.commit()
+    db.refresh(series)
+    return to_series_out(series, include_seasons=True)
+
+
 class UploadInitOut(BaseModel):
     episode_id: int
     raw_key: str
@@ -360,7 +407,22 @@ class UploadInitOut(BaseModel):
 def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Session = Depends(get_db)):
     series = load_series_query(db).filter(Series.slug == slug).first()
     if not series:
-        raise HTTPException(status_code=404, detail="Series not found")
+        # Auto-create series so Windows batch SyncCatalog works without seed deploy
+        pretty = "X-Men '97" if slug == "x-men-97" else slug.replace("-", " ").title()
+        series = Series(
+            slug=slug,
+            title=pretty,
+            english_title=pretty,
+            description="",
+            year_start=0,
+            franchise=_guess_franchise(slug),
+            genre="Hoạt hình",
+            poster_key="/movies/poster-1.png",
+            backdrop_key="/movies/hero-backdrop.png",
+            rating="8.5",
+        )
+        db.add(series)
+        db.flush()
     season = next((s for s in series.seasons if s.number == season_number), None)
     if not season:
         season = Season(series_id=series.id, number=season_number, title=f"Season {season_number}")
@@ -378,7 +440,7 @@ def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Sessi
         duration_minutes=body.duration_minutes,
         hls_key=f"{series.slug}/{ep_code}/master.m3u8",
         poster_key=series.poster_key,
-        status="PENDING",
+        status="READY",
     )
     db.add(ep)
     db.commit()

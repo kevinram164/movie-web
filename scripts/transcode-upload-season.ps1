@@ -59,6 +59,55 @@ function Enable-InsecureTls {
   $script:CinehomeInsecureTlsDone = $true
 }
 
+function Ensure-CatalogSeries(
+  [string]$Api,
+  [string]$Slug,
+  [string]$Title = ""
+) {
+  if ($Insecure) { Enable-InsecureTls }
+  if (-not $Title) {
+    if ($Slug -eq "x-men-97") { $Title = "X-Men '97" }
+    else { $Title = ($Slug -replace '-', ' ') }
+  }
+  # Probe: GET series; if 404, POST create
+  $getUri = "$Api/series/$Slug"
+  try {
+    Invoke-RestMethod -Method Get -Uri $getUri | Out-Null
+    return
+  } catch {
+    $code = $null
+    try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+    if ($code -ne 404) {
+      Write-Warning "catalog series check failed ($getUri): $($_.Exception.Message)"
+      return
+    }
+  }
+  $postUri = "$Api/series"
+  $franchise = "other"
+  if ($Slug -match '(?i)^x-?men') { $franchise = "x-men" }
+  elseif ($Slug -match '(?i)spider') { $franchise = "spiderman" }
+  elseif ($Slug -match '(?i)batman') { $franchise = "batman" }
+  $body = @{
+    slug          = $Slug
+    title         = $Title
+    english_title = $Title
+    franchise     = $franchise
+    year_start    = 2024
+  } | ConvertTo-Json
+  try {
+    Invoke-RestMethod -Method Post -Uri $postUri -ContentType "application/json" -Body $body | Out-Null
+    Write-Host "     + catalog: create series $Slug"
+  } catch {
+    $code = $null
+    try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+    if ($code -eq 409) {
+      Write-Host "     - catalog: series exists $Slug"
+    } else {
+      Write-Warning "catalog create series failed ($postUri): $($_.Exception.Message)"
+    }
+  }
+}
+
 function Ensure-CatalogEpisode(
   [string]$Api,
   [string]$Slug,
@@ -67,6 +116,7 @@ function Ensure-CatalogEpisode(
   [string]$Title
 ) {
   if ($Insecure) { Enable-InsecureTls }
+  Ensure-CatalogSeries $Api $Slug
   $uri = "$Api/series/$Slug/seasons/$Season/episodes"
   $body = @{
     title            = $Title
