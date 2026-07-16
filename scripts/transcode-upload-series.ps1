@@ -81,15 +81,16 @@ foreach ($dir in $folders) {
     continue
   }
 
-  $mp4Count = @(Get-ChildItem -LiteralPath $dir.FullName -File -Filter *.mp4 -ErrorAction SilentlyContinue).Count
-  if ($mp4Count -eq 0) {
-    Write-Warning "Skip (no .mp4): $($dir.Name)"
+  $vidCount = @(Get-ChildItem -LiteralPath $dir.FullName -File -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -match '(?i)^\.(mp4|mkv|m4v|mov)$' }).Count
+  if ($vidCount -eq 0) {
+    Write-Warning "Skip (no .mp4/.mkv): $($dir.Name)"
     continue
   }
 
   $slug = Resolve-TargetSlug $dir.Name
   Write-Host ""
-  Write-Host "######## $($dir.Name) ($mp4Count eps) -> $slug ########"
+  Write-Host "######## $($dir.Name) ($vidCount eps) -> $slug ########"
 
   $args = @{
     SourceDir  = $dir.FullName

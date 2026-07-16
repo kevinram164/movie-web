@@ -147,12 +147,14 @@ if (-not $SkipUpload) { Require-Cmd mc }
 
 $rx = [regex]'(?i)S(?<season>\d{1,2})\s*E(?<episode>\d{1,3})'
 
-$videos = Get-ChildItem -Path $SourceDir -File -Filter *.mp4
+$videos = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
+  $_.Extension -match '(?i)^\.(mp4|mkv|m4v|mov)$'
+})
 if (-not $videos) {
-  throw "No .mp4 files in: $SourceDir"
+  throw "No video files (.mp4/.mkv) in: $SourceDir"
 }
 
-Write-Host "==> $($videos.Count) MP4 in $SourceDir"
+Write-Host "==> $($videos.Count) video(s) in $SourceDir"
 Write-Host "==> Series: $SeriesSlug -> $Bucket/<slug>/sXXeYY/"
 
 $ok = 0
