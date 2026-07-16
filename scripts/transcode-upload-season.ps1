@@ -1,14 +1,13 @@
-<#
+﻿<#
 .SYNOPSIS
-  Convert 1 folder Season MP4(+SRT) → HLS → MinIO (+ optional sync catalog API)
+  Convert 1 Season folder MP4(+SRT) to HLS and upload MinIO (+ optional catalog sync).
 
 .EXAMPLE
   .\scripts\transcode-upload-season.ps1 `
     -SourceDir "D:\Movie\...\Season 1 (1992-93)" `
     -SeriesSlug "x-men-animated"
 
-  Yêu cầu: ffmpeg + mc trên PATH; đã chạy:
-    mc alias set cinehome https://minio-api-minio.apps.ocp01.npd.co USER PASS
+  Requires ffmpeg + mc on PATH (or tools\ in repo).
 #>
 param(
   [Parameter(Mandatory = $true)]
@@ -29,7 +28,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Ưu tiên tools/ trong repo (ffmpeg.exe, mc.exe) rồi mới tới PATH
+# Prefer repo tools\ (ffmpeg.exe, mc.exe) then PATH
 $script:RepoTools = Join-Path (Split-Path $PSScriptRoot -Parent) "tools"
 if (Test-Path $script:RepoTools) {
   $env:Path = "$script:RepoTools;$env:Path"
@@ -37,19 +36,23 @@ if (Test-Path $script:RepoTools) {
 
 function Require-Cmd($name) {
   if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
-    throw "Thiếu lệnh '$name' trên PATH. Đặt $name.exe vào folder tools\ của repo, hoặc cài ffmpeg / mc."
+    throw "Missing command '$name' on PATH. Put $name.exe in tools\ or install ffmpeg/mc."
   }
 }
 
+function Get-McArgs {
+  if ($Insecure) { return @("--insecure") }
+  return @()
+}
+
 function Get-EpisodeTitle([string]$baseName) {
-  if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[-–.]\s*(.+)$') {
+  if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[--.]\s*(.+)$') {
     return ($Matches[1] -replace '\s+', ' ').Trim()
   }
   return $baseName
 }
 
 function Enable-InsecureTls {
-  # Windows PowerShell 5.1 — tin cert Route OCP self-signed
   if ($script:CinehomeInsecureTlsDone) { return }
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
@@ -66,33 +69,67 @@ function Ensure-CatalogEpisode(
   if ($Insecure) { Enable-InsecureTls }
   $uri = "$Api/series/$Slug/seasons/$Season/episodes"
   $body = @{
-    title             = $Title
-    number            = $Number
-    description       = ""
-    duration_minutes  = 22
+    title            = $Title
+    number           = $Number
+    description      = ""
+    duration_minutes = 22
   } | ConvertTo-Json
   try {
     Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body | Out-Null
-    Write-Host "     + catalog: tạo S$Season E$Number"
+    Write-Host "     + catalog: create S$Season E$Number"
   } catch {
     $code = $null
     try { $code = [int]$_.Exception.Response.StatusCode } catch { }
     if ($code -eq 409) {
-      Write-Host "     · catalog: đã có S$Season E$Number"
+      Write-Host "     - catalog: exists S$Season E$Number"
     } else {
-      Write-Warning "catalog sync thất bại ($uri): $($_.Exception.Message)"
+      Write-Warning "catalog sync failed ($uri): $($_.Exception.Message)"
     }
   }
 }
 
-function Get-McArgs {
-  if ($Insecure) { return @("--insecure") }
-  return @()
+function Convert-SrtToVtt([string]$SrtPath, [string]$VttPath) {
+  # Many fan-rip .srt are not UTF-8; try common encodings
+  $encodings = @("UTF-8", "CP1252", "ISO-8859-1", "WINDOWS-1258", "CP1258")
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    foreach ($enc in $encodings) {
+      if (Test-Path $VttPath) { Remove-Item -Force $VttPath -ErrorAction SilentlyContinue }
+      $null = & ffmpeg -hide_banner -loglevel error -y -sub_charenc $enc -i $SrtPath $VttPath 2>&1
+      if ($LASTEXITCODE -eq 0 -and (Test-Path $VttPath) -and ((Get-Item $VttPath).Length -gt 0)) {
+        return $true
+      }
+    }
+  } finally {
+    $ErrorActionPreference = $prev
+  }
+  return $false
+}
+
+function Inject-SubsIntoMaster([string]$MasterPath, [string]$WorkDir) {
+  $subsPl = Join-Path $WorkDir "subs.vi.m3u8"
+  @"
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:99999
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:99999.0,
+subs.vi.vtt
+#EXT-X-ENDLIST
+"@ | Set-Content -Path $subsPl -Encoding utf8
+
+  $masterText = Get-Content -Raw $MasterPath
+  if ($masterText -notmatch 'TYPE=SUBTITLES') {
+    $media = '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Vietnamese",DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,LANGUAGE="vi",URI="subs.vi.m3u8"'
+    $masterText = $masterText -replace '(#EXTM3U\r?\n)', "`$1$media`n"
+    $masterText = $masterText -replace '(#EXT-X-STREAM-INF:[^\r\n]+)', '$1,SUBTITLES="subs"'
+    [System.IO.File]::WriteAllText($MasterPath, $masterText)
+  }
 }
 
 function Test-MinioObject([string]$Alias, [string]$BucketName, [string]$Key) {
-  # mc ghi ERROR ra stderr khi object chưa có — với $ErrorActionPreference=Stop
-  # PowerShell coi là terminating; cần Continue + nuốt stderr.
   $prev = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
@@ -112,11 +149,11 @@ $rx = [regex]'(?i)S(?<season>\d{1,2})\s*E(?<episode>\d{1,3})'
 
 $videos = Get-ChildItem -Path $SourceDir -File -Filter *.mp4
 if (-not $videos) {
-  throw "Không thấy file .mp4 trong: $SourceDir"
+  throw "No .mp4 files in: $SourceDir"
 }
 
-Write-Host "==> $($videos.Count) MP4 trong $SourceDir"
-Write-Host "==> Series: $SeriesSlug → $Bucket/<slug>/sXXeYY/"
+Write-Host "==> $($videos.Count) MP4 in $SourceDir"
+Write-Host "==> Series: $SeriesSlug -> $Bucket/<slug>/sXXeYY/"
 
 $ok = 0
 $skip = 0
@@ -125,7 +162,7 @@ $fail = 0
 foreach ($vid in $videos | Sort-Object Name) {
   $m = $rx.Match($vid.BaseName)
   if (-not $m.Success) {
-    Write-Warning "Bỏ qua (không parse SxxExx): $($vid.Name)"
+    Write-Warning "Skip (cannot parse SxxExx): $($vid.Name)"
     $fail++
     continue
   }
@@ -140,7 +177,7 @@ foreach ($vid in $videos | Sort-Object Name) {
 
   Write-Host ""
   Write-Host "---- $($vid.Name)"
-  Write-Host "     → $Bucket/$objectPrefix/"
+  Write-Host "     -> $Bucket/$objectPrefix/"
 
   if ($WhatIf) {
     Write-Host "     (WhatIf) title='$title'"
@@ -149,7 +186,7 @@ foreach ($vid in $videos | Sort-Object Name) {
 
   if ($SkipExisting -and -not $SkipUpload) {
     if (Test-MinioObject $MinioAlias $Bucket $masterKey) {
-      Write-Host "     SKIP (đã có trên MinIO)"
+      Write-Host "     SKIP (already on MinIO)"
       if ($SyncCatalog) {
         Ensure-CatalogEpisode $ApiBase $SeriesSlug $season $episode $title
       }
@@ -179,33 +216,16 @@ foreach ($vid in $videos | Sort-Object Name) {
   $srt = Join-Path $vid.DirectoryName ($vid.BaseName + ".srt")
   if (Test-Path $srt) {
     $vtt = Join-Path $work "subs.vi.vtt"
-    & ffmpeg -hide_banner -loglevel error -y -i $srt $vtt
-    if ($LASTEXITCODE -eq 0) {
-      $subsPl = Join-Path $work "subs.vi.m3u8"
-      @"
-#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-TARGETDURATION:99999
-#EXT-X-MEDIA-SEQUENCE:0
-#EXT-X-PLAYLIST-TYPE:VOD
-#EXTINF:99999.0,
-subs.vi.vtt
-#EXT-X-ENDLIST
-"@ | Set-Content -Path $subsPl -Encoding utf8
-
-      $masterText = Get-Content -Raw $master
-      if ($masterText -notmatch 'TYPE=SUBTITLES') {
-        $media = '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Vietnamese",DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,LANGUAGE="vi",URI="subs.vi.m3u8"'
-        $masterText = $masterText -replace '(#EXTM3U\r?\n)', "`$1$media`n"
-        $masterText = $masterText -replace '(#EXT-X-STREAM-INF:[^\r\n]+)', '$1,SUBTITLES="subs"'
-        [System.IO.File]::WriteAllText($master, $masterText)
-      }
-      Write-Host "     + phụ đề → subs.vi.vtt"
+    if (Convert-SrtToVtt $srt $vtt) {
+      Inject-SubsIntoMaster $master $work
+      Write-Host "     + subtitle -> subs.vi.vtt"
+    } else {
+      Write-Warning "subtitle convert failed (charset): $(Split-Path $srt -Leaf) - video still uploaded"
     }
   }
 
   if ($SkipUpload) {
-    Write-Host "     (SkipUpload) HLS tại $work"
+    Write-Host "     (SkipUpload) HLS at $work"
     $ok++
     continue
   }
@@ -228,4 +248,4 @@ subs.vi.vtt
 }
 
 Write-Host ""
-Write-Host "Xong season: ok=$ok skip=$skip fail=$fail → $SeriesSlug"
+Write-Host "Done season: ok=$ok skip=$skip fail=$fail -> $SeriesSlug"

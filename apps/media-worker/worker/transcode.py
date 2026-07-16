@@ -101,12 +101,20 @@ def transcode_to_hls(
 
     if subtitle and subtitle.exists():
         vtt = out_dir / "subs.vi.vtt"
-        try:
-            run_ffmpeg(["-i", str(subtitle), str(vtt)])
+        converted = False
+        for enc in ("UTF-8", "CP1252", "ISO-8859-1", "WINDOWS-1258", "CP1258"):
+            try:
+                run_ffmpeg(["-sub_charenc", enc, "-i", str(subtitle), str(vtt)])
+                if vtt.exists() and vtt.stat().st_size > 0:
+                    converted = True
+                    break
+            except RuntimeError:
+                continue
+        if converted:
             _write_subs_playlist(out_dir, vtt.name)
             _inject_subtitles_into_master(master)
             print(f"[transcode] subtitles → {vtt.name}")
-        except RuntimeError as exc:
-            print(f"[warn] subtitle convert failed: {exc}")
+        else:
+            print(f"[warn] subtitle convert failed (charset): {subtitle.name}")
 
     return master

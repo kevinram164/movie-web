@@ -1,32 +1,26 @@
-<#
+﻿<#
 .SYNOPSIS
-  Upload cả bộ series: quét thư mục gốc (Season 1..N + X97) → ffmpeg HLS → MinIO.
+  Batch upload a whole series: scan root (Season 1..N + X97) -> ffmpeg HLS -> MinIO.
 
 .DESCRIPTION
-  Dùng cho cấu trúc kiểu:
+  Expected layout:
     02. X-Men - The Animated Series (Complete - 480p SD)\
       Season 1 (1992-93)\
       Season 2 (1993-94)\
       ...
       X97\
 
-  Season 1–5 → SeriesSlug (mặc định x-men-animated)
-  Folder X97  → X97SeriesSlug (mặc định x-men-97) — KHÔNG ghi đè S01 của TAS
+  Season 1-5 -> SeriesSlug (default x-men-animated)
+  Folder X97 -> X97SeriesSlug (default x-men-97) - does NOT overwrite TAS S01
 
 .EXAMPLE
-  # 1 lần: alias MinIO
-  mc alias set cinehome https://minio-api-minio.apps.ocp01.npd.co minioadmin "<password>"
+  mc alias set cinehome https://minio-api-minio.apps.ocp01.npd.co minioadmin "<password>" --insecure
 
-  # Xem sẽ xử lý gì (không convert)
-  .\scripts\transcode-upload-series.ps1 `
-    -RootDir "D:\Movie\X-Men - ANIME Series and CARTOON Shows (720p & 480p)\Cartoon Shows\02. X-Men - The Animated Series (Complete - 480p SD)" `
-    -WhatIf
-
-  # Chạy thật + tạo tập trên web nếu thiếu
   .\scripts\transcode-upload-series.ps1 `
     -RootDir "D:\Movie\...\02. X-Men - The Animated Series (Complete - 480p SD)" `
     -SkipExisting `
-    -SyncCatalog
+    -SyncCatalog `
+    -Insecure
 #>
 param(
   [Parameter(Mandatory = $true)]
@@ -48,35 +42,34 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not (Test-Path -LiteralPath $RootDir)) {
-  throw "Không thấy thư mục: $RootDir"
+  throw "Folder not found: $RootDir"
 }
 
 $seasonScript = Join-Path $PSScriptRoot "transcode-upload-season.ps1"
 if (-not (Test-Path $seasonScript)) {
-  throw "Thiếu $seasonScript"
+  throw "Missing $seasonScript"
 }
 
 $folders = Get-ChildItem -LiteralPath $RootDir -Directory | Sort-Object Name
 if (-not $folders) {
-  throw "Không có subfolder trong: $RootDir"
+  throw "No subfolders in: $RootDir"
 }
 
 function Resolve-TargetSlug([string]$folderName) {
-  if ($folderName -match '(?i)^x[\s''’`-]*97$|^xmen[\s''’`-]*97$|^x-men[\s''’`-]*97$') {
+  if ($folderName -match '(?i)^x97$|^xmen.?97$|^x-men.?97$') {
     return $X97SeriesSlug
   }
   if ($folderName -match '(?i)^season\s+\d+') {
     return $SeriesSlug
   }
-  # Thư mục lạ: vẫn dùng SeriesSlug nếu bên trong có SxxExx
   return $SeriesSlug
 }
 
 Write-Host "========================================"
 Write-Host " CineHome batch upload"
 Write-Host " Root: $RootDir"
-Write-Host " TAS  → $SeriesSlug"
-Write-Host " X97  → $X97SeriesSlug"
+Write-Host " TAS  -> $SeriesSlug"
+Write-Host " X97  -> $X97SeriesSlug"
 Write-Host " SkipExisting=$SkipExisting SyncCatalog=$SyncCatalog"
 Write-Host "========================================"
 
@@ -90,20 +83,20 @@ foreach ($dir in $folders) {
 
   $mp4Count = @(Get-ChildItem -LiteralPath $dir.FullName -File -Filter *.mp4 -ErrorAction SilentlyContinue).Count
   if ($mp4Count -eq 0) {
-    Write-Warning "Bỏ qua (không có .mp4): $($dir.Name)"
+    Write-Warning "Skip (no .mp4): $($dir.Name)"
     continue
   }
 
   $slug = Resolve-TargetSlug $dir.Name
   Write-Host ""
-  Write-Host "######## $($dir.Name) ($mp4Count tập) → $slug ########"
+  Write-Host "######## $($dir.Name) ($mp4Count eps) -> $slug ########"
 
   $args = @{
-    SourceDir   = $dir.FullName
-    SeriesSlug  = $slug
-    MinioAlias  = $MinioAlias
-    Bucket      = $Bucket
-    ApiBase     = $ApiBase
+    SourceDir  = $dir.FullName
+    SeriesSlug = $slug
+    MinioAlias = $MinioAlias
+    Bucket     = $Bucket
+    ApiBase    = $ApiBase
   }
   if ($SkipUpload) { $args.SkipUpload = $true }
   if ($SkipExisting) { $args.SkipExisting = $true }
@@ -118,7 +111,7 @@ foreach ($dir in $folders) {
 $elapsed = (Get-Date) - $started
 Write-Host ""
 Write-Host "========================================"
-Write-Host " Xong $ran folder(s) trong $([int]$elapsed.TotalMinutes) phút"
-Write-Host " Web: $ApiBase → /series/$SeriesSlug (và $X97SeriesSlug nếu có X97)"
-Write-Host " Gợi ý: mở máy, chạy qua đêm với -SkipExisting để resume khi lỗi."
+Write-Host " Done $ran folder(s) in $([int]$elapsed.TotalMinutes) min"
+Write-Host " Web: $ApiBase /series/$SeriesSlug (and $X97SeriesSlug if X97)"
+Write-Host " Tip: re-run with -SkipExisting to resume."
 Write-Host "========================================"
