@@ -1,21 +1,19 @@
-# Image tags — CI cập nhật qua root jenkins-shared-library (cinehomePipeline)
-# Canonical file: ../../gitops/values-images.yaml (repo root)
-# File này giữ symlink-doc tương thích path cũ trong phase9.
-
+# Image tags — CI updates root ../../gitops/values-images.yaml (canonical).
+# Keep tags quoted — bare hex like 4700539e becomes a YAML float.
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: latest
+    tag: "latest"
     pullPolicy: Always
 
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: latest
+    tag: "latest"
     pullPolicy: Always
 
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: latest
+    tag: "latest"
     pullPolicy: Always

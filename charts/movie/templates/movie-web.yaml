@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: movie-web
-          image: "{{ .Values.movieWeb.image.repository }}:{{ .Values.movieWeb.image.tag }}"
+          image: "{{ .Values.movieWeb.image.repository }}:{{ .Values.movieWeb.image.tag | toString }}"
           imagePullPolicy: {{ .Values.movieWeb.image.pullPolicy }}
           ports:
             - name: http

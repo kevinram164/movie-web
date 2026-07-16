@@ -1,18 +1,19 @@
-# Image tags — CI (cinehomePipeline / Kaniko) cập nhật trên nhánh main
+# Image tags — CI (cinehomePipeline / Kaniko) updates on main.
+# IMPORTANT: always quote tags — bare hex like 4700539e is parsed as a float in YAML.
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: c5556c2
+    tag: "c5556c2"
     pullPolicy: Always
 
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: c5556c2
+    tag: "c5556c2"
     pullPolicy: Always
 
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: c5556c2
+    tag: "c5556c2"
     pullPolicy: Always

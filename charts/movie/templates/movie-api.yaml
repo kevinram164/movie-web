@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: movie-api
-          image: "{{ .Values.movieApi.image.repository }}:{{ .Values.movieApi.image.tag }}"
+          image: "{{ .Values.movieApi.image.repository }}:{{ .Values.movieApi.image.tag | toString }}"
           imagePullPolicy: {{ .Values.movieApi.image.pullPolicy }}
           ports:
             - name: http

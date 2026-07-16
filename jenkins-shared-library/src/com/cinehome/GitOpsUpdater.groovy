@@ -11,7 +11,8 @@ class GitOpsUpdater implements Serializable {
             def helmKey = meta.helmKey
             steps.sh """
                 set -e
-                sed -i '/^${helmKey}:/,/^[^ ]/ s/^    tag: .*/    tag: ${tag}/' ${file} || true
+                # Quote tag: YAML treats hex like 4700539e as scientific float otherwise
+                sed -i '/^${helmKey}:/,/^[^ ]/ s/^    tag: .*/    tag: \"${tag}\"/' ${file} || true
             """
         }
 

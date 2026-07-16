@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: media-worker
-          image: "{{ .Values.mediaWorker.image.repository }}:{{ .Values.mediaWorker.image.tag }}"
+          image: "{{ .Values.mediaWorker.image.repository }}:{{ .Values.mediaWorker.image.tag | toString }}"
           imagePullPolicy: {{ .Values.mediaWorker.image.pullPolicy }}
           env:
             {{- range $k, $v := .Values.mediaWorker.env }}

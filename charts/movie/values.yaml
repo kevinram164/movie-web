@@ -11,7 +11,7 @@ movieApi:
   replicaCount: 1
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: latest
+    tag: "latest"
     pullPolicy: Always
   service:
     port: 8080
@@ -47,7 +47,7 @@ movieWeb:
   replicaCount: 1
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: latest
+    tag: "latest"
     pullPolicy: Always
   service:
     port: 8080
@@ -68,7 +68,7 @@ mediaWorker:
   workVolumeSize: 4Gi
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: latest
+    tag: "latest"
     pullPolicy: Always
   resources:
     requests:
