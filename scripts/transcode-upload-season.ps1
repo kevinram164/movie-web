@@ -69,19 +69,28 @@ function Ensure-CatalogSeries(
     if ($Slug -eq "x-men-97") { $Title = "X-Men '97" }
     else { $Title = ($Slug -replace '-', ' ') }
   }
-  # Probe: GET series; if 404, POST create
+  # Probe: GET series; if 404, POST create. Retry once (first TLS handshake can fail transiently).
   $getUri = "$Api/series/$Slug"
-  try {
-    Invoke-RestMethod -Method Get -Uri $getUri | Out-Null
-    return
-  } catch {
-    $code = $null
-    try { $code = [int]$_.Exception.Response.StatusCode } catch { }
-    if ($code -ne 404) {
-      Write-Warning "catalog series check failed ($getUri): $($_.Exception.Message)"
+  $notFound = $false
+  for ($attempt = 1; $attempt -le 2; $attempt++) {
+    try {
+      Invoke-RestMethod -Method Get -Uri $getUri | Out-Null
       return
+    } catch {
+      $code = $null
+      try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+      if ($code -eq 404) {
+        $notFound = $true
+        break
+      }
+      if ($attempt -eq 2) {
+        Write-Warning "catalog series check failed ($getUri): $($_.Exception.Message)"
+        return
+      }
+      Start-Sleep -Seconds 1
     }
   }
+  if (-not $notFound) { return }
   $postUri = "$Api/series"
   $franchise = "other"
   if ($Slug -match '(?i)^x-?men') { $franchise = "x-men" }

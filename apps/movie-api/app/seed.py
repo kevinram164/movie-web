@@ -28,8 +28,8 @@ ANIMATION_SERIES = [
         "year_start": 1992,
         "franchise": "x-men",
         "genre": "Hoạt hình",
-        "poster_key": "/movies/poster-1.png",
-        "backdrop_key": "/movies/hero-backdrop.png",
+        "poster_key": "/movies/x-men-tas-poster.jpg",
+        "backdrop_key": "/movies/x-men-tas-backdrop.jpg",
         "rating": "8.8",
         "seasons": [
             {
@@ -64,8 +64,8 @@ ANIMATION_SERIES = [
         "year_start": 2024,
         "franchise": "x-men",
         "genre": "Hoạt hình",
-        "poster_key": "/movies/poster-1.png",
-        "backdrop_key": "/movies/hero-backdrop.png",
+        "poster_key": "/movies/x-men-97-poster.webp",
+        "backdrop_key": "/movies/x-men-97-backdrop.webp",
         "rating": "9.0",
         "seasons": [
             {
@@ -205,3 +205,36 @@ def seed_series(db: Session) -> int:
     if created_series:
         db.commit()
     return created_series
+
+
+def sync_series_artwork(db: Session) -> int:
+    """Update artwork for existing rows; seed_series intentionally skips them."""
+    artwork = {
+        "x-men-animated": (
+            "/movies/x-men-tas-poster.jpg",
+            "/movies/x-men-tas-backdrop.jpg",
+        ),
+        "x-men-97": (
+            "/movies/x-men-97-poster.webp",
+            "/movies/x-men-97-backdrop.webp",
+        ),
+    }
+    updated = 0
+    changed = False
+    for slug, (poster_key, backdrop_key) in artwork.items():
+        series = db.query(Series).filter(Series.slug == slug).first()
+        if not series:
+            continue
+        if series.poster_key != poster_key or series.backdrop_key != backdrop_key:
+            series.poster_key = poster_key
+            series.backdrop_key = backdrop_key
+            updated += 1
+            changed = True
+        for season in series.seasons:
+            for episode in season.episodes:
+                if episode.poster_key != poster_key:
+                    episode.poster_key = poster_key
+                    changed = True
+    if changed:
+        db.commit()
+    return updated

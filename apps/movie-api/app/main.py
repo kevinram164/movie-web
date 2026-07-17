@@ -8,7 +8,7 @@ from app.config import settings
 from app.db import Episode, Movie, Season, Series, get_db, init_db
 from app.minio_client import ensure_buckets, presigned_put_url, public_object_url, put_fileobj
 from app.queue import enqueue_media_job
-from app.seed import seed_movies, seed_series
+from app.seed import seed_movies, seed_series, sync_series_artwork
 
 app = FastAPI(title=settings.app_name, version="1.1.0")
 
@@ -233,8 +233,9 @@ def on_startup() -> None:
         try:
             nm = seed_movies(db)
             ns = seed_series(db)
-            if nm or ns:
-                print(f"[seed] movies={nm} series={ns}")
+            na = sync_series_artwork(db)
+            if nm or ns or na:
+                print(f"[seed] movies={nm} series={ns} artwork={na}")
         finally:
             db.close()
 

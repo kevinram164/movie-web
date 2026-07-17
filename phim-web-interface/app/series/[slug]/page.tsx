@@ -35,9 +35,21 @@ export default function SeriesPage() {
   const firstEp = season?.episodes[0]
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <SiteHeader />
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+      {series?.backdrop_url && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[62vh]">
+          <img
+            src={series.backdrop_url}
+            alt=""
+            aria-hidden="true"
+            className="size-full object-cover opacity-55"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/70 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/30" />
+        </div>
+      )}
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
         <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
           Catalog
