@@ -88,7 +88,10 @@ def transcode_to_hls(
             "-c:a",
             "aac",
             "-b:a",
-            "128k",
+            "160k",
+            # Browsers can't play 5.1 AAC from web-dl sources; force stereo
+            "-ac",
+            "2",
             "-hls_time",
             str(hls_time),
             "-hls_playlist_type",

@@ -262,9 +262,10 @@ foreach ($vid in $videos | Sort-Object Name) {
   $master = Join-Path $work "master.m3u8"
   $seg = Join-Path $work "seg_%04d.ts"
 
+  # -ac 2: browser khong phat duoc AAC 5.1 (nguon web-dl DDP) -> ep stereo
   & ffmpeg -hide_banner -loglevel error -y -i $vid.FullName `
     -c:v libx264 -preset veryfast -crf 22 `
-    -c:a aac -b:a 128k `
+    -c:a aac -b:a 160k -ac 2 `
     -hls_time 6 -hls_playlist_type vod `
     -hls_segment_filename $seg `
     $master
