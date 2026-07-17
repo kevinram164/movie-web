@@ -3,6 +3,7 @@ export type SeriesCard = {
   slug: string
   title: string
   english_title: string
+  description: string
   year_start: number
   franchise: string
   genre: string
@@ -34,7 +35,6 @@ export type Season = {
 }
 
 export type SeriesDetail = SeriesCard & {
-  description: string
   seasons: Season[]
 }
 

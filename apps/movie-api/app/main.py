@@ -130,6 +130,7 @@ class SeriesCard(BaseModel):
     slug: str
     title: str
     english_title: str
+    description: str
     year_start: int
     franchise: str
     genre: str
@@ -201,6 +202,7 @@ def to_series_card(series: Series) -> SeriesCard:
         slug=series.slug,
         title=series.title,
         english_title=series.english_title,
+        description=series.description,
         year_start=series.year_start,
         franchise=series.franchise,
         genre=series.genre,

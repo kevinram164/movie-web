@@ -30,7 +30,7 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteHeader />
-      <Hero featured={data?.featured ?? null} />
+      <Hero items={data?.rows[0]?.items ?? (data?.featured ? [data.featured] : [])} />
       <GenreBar />
       {error && (
         <p className="mx-auto max-w-7xl px-4 py-4 text-sm text-destructive sm:px-6 lg:px-8">{error}</p>

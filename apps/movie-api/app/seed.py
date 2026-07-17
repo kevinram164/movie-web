@@ -88,8 +88,8 @@ ANIMATION_SERIES = [
         "year_start": 1994,
         "franchise": "spiderman",
         "genre": "Hoạt hình",
-        "poster_key": "/movies/poster-2.png",
-        "backdrop_key": "/movies/hero-backdrop.png",
+        "poster_key": "/movies/spiderman-tas-poster.jpg",
+        "backdrop_key": "/movies/spiderman-tas-backdrop.jpg",
         "rating": "8.5",
         "seasons": [
             {
@@ -124,8 +124,8 @@ ANIMATION_SERIES = [
         "year_start": 1992,
         "franchise": "batman",
         "genre": "Hoạt hình",
-        "poster_key": "/movies/poster-3.png",
-        "backdrop_key": "/movies/hero-backdrop.png",
+        "poster_key": "/movies/batman-tas-poster.jpg",
+        "backdrop_key": "/movies/batman-tas-backdrop.webp",
         "rating": "9.0",
         "seasons": [
             {
@@ -217,6 +217,14 @@ def sync_series_artwork(db: Session) -> int:
         "x-men-97": (
             "/movies/x-men-97-poster.webp",
             "/movies/x-men-97-backdrop.webp",
+        ),
+        "spiderman-animated": (
+            "/movies/spiderman-tas-poster.jpg",
+            "/movies/spiderman-tas-backdrop.jpg",
+        ),
+        "batman-animated": (
+            "/movies/batman-tas-poster.jpg",
+            "/movies/batman-tas-backdrop.webp",
         ),
     }
     updated = 0
