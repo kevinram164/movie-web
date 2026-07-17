@@ -46,10 +46,29 @@ function Get-McArgs {
 }
 
 function Get-EpisodeTitle([string]$baseName) {
-  if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[--.]\s*(.+)$') {
+  if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[-.]\s*(.+)$') {
+    return ($Matches[1] -replace '\s+', ' ').Trim()
+  }
+  if ($baseName -match '(?i)^\d{1,2}x\d{1,3}\s*[-.]?\s*(.+)$') {
     return ($Matches[1] -replace '\s+', ' ').Trim()
   }
   return $baseName
+}
+
+function Get-EpisodeInfo([string]$baseName) {
+  if ($baseName -match '(?i)S(?<season>\d{1,2})\s*E(?<episode>\d{1,3})') {
+    return [pscustomobject]@{
+      Season  = [int]$Matches["season"]
+      Episode = [int]$Matches["episode"]
+    }
+  }
+  if ($baseName -match '(?i)(?<season>\d{1,2})x(?<episode>\d{1,3})') {
+    return [pscustomobject]@{
+      Season  = [int]$Matches["season"]
+      Episode = [int]$Matches["episode"]
+    }
+  }
+  return $null
 }
 
 function Enable-InsecureTls {
@@ -204,16 +223,35 @@ function Test-MinioObject([string]$Alias, [string]$BucketName, [string]$Key) {
 Require-Cmd ffmpeg
 if (-not $SkipUpload) { Require-Cmd mc }
 
-$rx = [regex]'(?i)S(?<season>\d{1,2})\s*E(?<episode>\d{1,3})'
-
-$videos = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
+$candidates = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
   $_.Extension -match '(?i)^\.(mp4|mkv|m4v|mov)$'
 })
-if (-not $videos) {
+if (-not $candidates) {
   throw "No video files (.mp4/.mkv) in: $SourceDir"
 }
 
-Write-Host "==> $($videos.Count) video(s) in $SourceDir"
+# One source per episode. Prefer the smaller MP4 when both MP4 and MKV exist.
+$videos = @(
+  $candidates |
+    Group-Object {
+      $info = Get-EpisodeInfo $_.BaseName
+      if ($info) { "{0:D2}x{1:D3}" -f $info.Season, $info.Episode }
+      else { "unparsed:$($_.FullName)" }
+    } |
+    ForEach-Object {
+      $_.Group |
+        Sort-Object @{
+          Expression = {
+            if ($_.Extension -ieq ".mp4") { 0 }
+            elseif ($_.Extension -ieq ".mkv") { 1 }
+            else { 2 }
+          }
+        }, Length |
+        Select-Object -First 1
+    }
+)
+
+Write-Host "==> $($candidates.Count) source file(s), $($videos.Count) unique episode(s) in $SourceDir"
 Write-Host "==> Series: $SeriesSlug -> $Bucket/<slug>/sXXeYY/"
 
 $ok = 0
@@ -221,15 +259,15 @@ $skip = 0
 $fail = 0
 
 foreach ($vid in $videos | Sort-Object Name) {
-  $m = $rx.Match($vid.BaseName)
-  if (-not $m.Success) {
-    Write-Warning "Skip (cannot parse SxxExx): $($vid.Name)"
+  $info = Get-EpisodeInfo $vid.BaseName
+  if (-not $info) {
+    Write-Warning "Skip (cannot parse SxxExx or 01x01): $($vid.Name)"
     $fail++
     continue
   }
 
-  $season = [int]$m.Groups["season"].Value
-  $episode = [int]$m.Groups["episode"].Value
+  $season = $info.Season
+  $episode = $info.Episode
   $epCode = "s{0:D2}e{1:D2}" -f $season, $episode
   $objectPrefix = "$SeriesSlug/$epCode"
   $masterKey = "$objectPrefix/master.m3u8"
