@@ -115,17 +115,17 @@ ANIMATION_SERIES = [
     },
     {
         "slug": "batman-animated",
-        "title": "Batman Animations",
+        "title": "Batman: The Animated Series",
         "english_title": "Batman: The Animated Series",
         "description": (
             "Hiệp sĩ bóng đêm bảo vệ Gotham trong phong cách noir hoạt hình. "
-            "Scaffold seasons/episodes — upload HLS khi sẵn sàng."
+            "Series kinh điển 1992–95 — upload HLS từng tập lên MinIO."
         ),
         "year_start": 1992,
         "franchise": "batman",
         "genre": "Hoạt hình",
         "poster_key": "/movies/batman-tas-poster.jpg",
-        "backdrop_key": "/movies/batman-tas-backdrop.webp",
+        "backdrop_key": "/movies/batman-tas-backdrop.jpg",
         "rating": "9.0",
         "seasons": [
             {
@@ -142,14 +142,167 @@ ANIMATION_SERIES = [
                 "number": 2,
                 "title": "Season 2",
                 "episodes": [
-                    ("Two-Face (1)", "Harvey Dent đổ vỡ."),
-                    ("Two-Face (2)", "Batman đối đầu người bạn cũ."),
-                    ("Joker's Favor", "Charlie và kế hoạch của Joker."),
+                    ("Eternal Youth", "Ra's al Ghul và elixir trẻ hóa."),
+                    ("Perchance to Dream", "Bruce Wayne trong thế giới không có Batman."),
+                    ("Robin's Reckoning (1)", "Quá khứ của Dick Grayson."),
+                ],
+            },
+            {
+                "number": 3,
+                "title": "Season 3",
+                "episodes": [
+                    ("Shadow of the Bat (1)", "Batman bị buộc tội — Batgirl xuất hiện."),
+                    ("The Demon's Quest (1)", "Ra's al Ghul trở lại."),
+                    ("Harlequinade", "Harley Quinn và Joker."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "batman-new-adventures",
+        "title": "The New Batman Adventures",
+        "english_title": "The New Batman Adventures",
+        "description": (
+            "Tiếp nối BTAS với thiết kế mới — Batgirl, Nightwing và thế hệ phản diện "
+            "Gotham thập niên 90 muộn."
+        ),
+        "year_start": 1997,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/batman-tnba-poster.jpg",
+        "backdrop_key": "/movies/batman-tnba-backdrop.jpg",
+        "rating": "8.7",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Season 1",
+                "episodes": [
+                    ("Holiday Knights", "Ba câu chuyện đêm giao thừa Gotham."),
+                    ("Sins of the Father", "Tim Drake trở thành Robin mới."),
+                    ("Mad Love", "Nguồn gốc Harley Quinn."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "the-batman-2004",
+        "title": "The Batman (2004)",
+        "english_title": "The Batman",
+        "description": (
+            "Bruce Wayne những năm đầu làm Batman — phong cách góc cạnh, "
+            "đối đầu Joker, Penguin và liên minh phản diện mới."
+        ),
+        "year_start": 2004,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/the-batman-2004-poster.jpg",
+        "backdrop_key": "/movies/the-batman-2004-backdrop.jpg",
+        "rating": "7.5",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Season 1",
+                "episodes": [
+                    ("The Bat in the Belfry", "Batman đối đầu Joker lần đầu trong series."),
+                    ("Traction", "Bane xuất hiện."),
+                    ("Call of the Cobblepot", "Penguin trở lại Gotham."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "batman-phantasm",
+        "title": "Batman: Mask of the Phantasm",
+        "english_title": "Batman: Mask of the Phantasm",
+        "description": (
+            "Phim điện ảnh BTAS — Batman bị truy nã khi Phantasm săn tội phạm Gotham; "
+            "quá khứ với Andrea Beaumont trở lại."
+        ),
+        "year_start": 1993,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/batman-phantasm-poster.jpg",
+        "backdrop_key": "/movies/batman-phantasm-backdrop.jpg",
+        "rating": "8.5",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Film",
+                "episodes": [
+                    ("Mask of the Phantasm", "Batman, Joker và bí ẩn Phantasm."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "batman-subzero",
+        "title": "Batman & Mr. Freeze: SubZero",
+        "english_title": "Batman & Mr. Freeze: SubZero",
+        "description": (
+            "Mr. Freeze bắt cóc Barbara Gordon để cứu vợ — Batman và Robin "
+            "đua với thời gian trong phim direct-to-video BTAS."
+        ),
+        "year_start": 1998,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/batman-subzero-poster.jpg",
+        "backdrop_key": "/movies/batman-subzero-backdrop.jpg",
+        "rating": "7.2",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Film",
+                "episodes": [
+                    ("SubZero", "Mr. Freeze và kế hoạch cứu Nora."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "batman-return-of-the-joker",
+        "title": "Batman Beyond: Return of the Joker",
+        "english_title": "Batman Beyond: Return of the Joker",
+        "description": (
+            "Joker trở lại Neo-Gotham — Terry McGinnis và Bruce Wayne "
+            "đối mặt bí mật đen tối nhất của Batman Beyond."
+        ),
+        "year_start": 2000,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/batman-rotoj-poster.jpg",
+        "backdrop_key": "/movies/batman-rotoj-backdrop.jpg",
+        "rating": "8.0",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Film",
+                "episodes": [
+                    ("Return of the Joker", "Joker, Terry, và quá khứ của Tim Drake."),
                 ],
             },
         ],
     },
 ]
+
+# poster/backdrop paths under Next.js public/ — used by seed + sync on API startup
+SERIES_ARTWORK: dict[str, tuple[str, str]] = {
+    "x-men-animated": ("/movies/x-men-tas-poster.jpg", "/movies/x-men-tas-backdrop.jpg"),
+    "x-men-97": ("/movies/x-men-97-poster.webp", "/movies/x-men-97-backdrop.webp"),
+    "spiderman-animated": ("/movies/spiderman-tas-poster.jpg", "/movies/spiderman-tas-backdrop.jpg"),
+    "batman-animated": ("/movies/batman-tas-poster.jpg", "/movies/batman-tas-backdrop.jpg"),
+    "batman-new-adventures": ("/movies/batman-tnba-poster.jpg", "/movies/batman-tnba-backdrop.jpg"),
+    "the-batman-2004": ("/movies/the-batman-2004-poster.jpg", "/movies/the-batman-2004-backdrop.jpg"),
+    "batman-phantasm": ("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg"),
+    "batman-subzero": ("/movies/batman-subzero-poster.jpg", "/movies/batman-subzero-backdrop.jpg"),
+    "batman-return-of-the-joker": ("/movies/batman-rotoj-poster.jpg", "/movies/batman-rotoj-backdrop.jpg"),
+}
+
+
+def artwork_for_slug(slug: str) -> tuple[str, str]:
+    return SERIES_ARTWORK.get(
+        slug,
+        ("/movies/poster-1.png", "/movies/hero-backdrop.png"),
+    )
 
 
 def seed_movies(db: Session) -> int:
@@ -209,27 +362,9 @@ def seed_series(db: Session) -> int:
 
 def sync_series_artwork(db: Session) -> int:
     """Update artwork for existing rows; seed_series intentionally skips them."""
-    artwork = {
-        "x-men-animated": (
-            "/movies/x-men-tas-poster.jpg",
-            "/movies/x-men-tas-backdrop.jpg",
-        ),
-        "x-men-97": (
-            "/movies/x-men-97-poster.webp",
-            "/movies/x-men-97-backdrop.webp",
-        ),
-        "spiderman-animated": (
-            "/movies/spiderman-tas-poster.jpg",
-            "/movies/spiderman-tas-backdrop.jpg",
-        ),
-        "batman-animated": (
-            "/movies/batman-tas-poster.jpg",
-            "/movies/batman-tas-backdrop.webp",
-        ),
-    }
     updated = 0
     changed = False
-    for slug, (poster_key, backdrop_key) in artwork.items():
+    for slug, (poster_key, backdrop_key) in SERIES_ARTWORK.items():
         series = db.query(Series).filter(Series.slug == slug).first()
         if not series:
             continue

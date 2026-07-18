@@ -8,7 +8,7 @@ from app.config import settings
 from app.db import Episode, Movie, Season, Series, get_db, init_db
 from app.minio_client import ensure_buckets, presigned_put_url, public_object_url, put_fileobj
 from app.queue import enqueue_media_job
-from app.seed import seed_movies, seed_series, sync_series_artwork
+from app.seed import artwork_for_slug, seed_movies, seed_series, sync_series_artwork
 
 app = FastAPI(title=settings.app_name, version="1.1.0")
 
@@ -251,11 +251,16 @@ def health():
 def home(db: Session = Depends(get_db)):
     rows_series = load_series_query(db).all()
     featured = to_series_out(rows_series[0], include_seasons=False) if rows_series else None
-    # Ưu tiên Batman làm featured nếu có
+    # Prefer BTAS as hero when present
     for s in rows_series:
-        if s.franchise == "batman":
+        if s.slug == "batman-animated":
             featured = to_series_out(s, include_seasons=False)
             break
+    else:
+        for s in rows_series:
+            if s.franchise == "batman":
+                featured = to_series_out(s, include_seasons=False)
+                break
     return HomeOut(
         featured=featured,
         rows=[
@@ -411,7 +416,18 @@ def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Sessi
     series = load_series_query(db).filter(Series.slug == slug).first()
     if not series:
         # Auto-create series so Windows batch SyncCatalog works without seed deploy
-        pretty = "X-Men '97" if slug == "x-men-97" else slug.replace("-", " ").title()
+        pretty_titles = {
+            "x-men-97": "X-Men '97",
+            "batman-animated": "Batman: The Animated Series",
+            "batman-new-adventures": "The New Batman Adventures",
+            "the-batman-2004": "The Batman (2004)",
+            "batman-phantasm": "Batman: Mask of the Phantasm",
+            "batman-subzero": "Batman & Mr. Freeze: SubZero",
+            "batman-return-of-the-joker": "Batman Beyond: Return of the Joker",
+            "spiderman-animated": "Spider-Man: The Animated Series",
+        }
+        pretty = pretty_titles.get(slug, slug.replace("-", " ").title())
+        poster_key, backdrop_key = artwork_for_slug(slug)
         series = Series(
             slug=slug,
             title=pretty,
@@ -420,8 +436,8 @@ def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Sessi
             year_start=0,
             franchise=_guess_franchise(slug),
             genre="Hoạt hình",
-            poster_key="/movies/poster-1.png",
-            backdrop_key="/movies/hero-backdrop.png",
+            poster_key=poster_key,
+            backdrop_key=backdrop_key,
             rating="8.5",
         )
         db.add(series)

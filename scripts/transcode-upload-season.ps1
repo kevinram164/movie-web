@@ -29,7 +29,9 @@ param(
   # Default season when filename uses "Ep. 01" (TNBA / Beware the Batman)
   [int]$DefaultSeason = 1,
   # Skip relative paths matching this regex (e.g. 'Volume 4' when uploading BTAS only)
-  [string]$ExcludePathPattern = ""
+  [string]$ExcludePathPattern = "",
+  # Movie packs: "01. Title\" folders -> S01E01.. (Justice League movies, etc.)
+  [switch]$NumberedFolders
 )
 
 $ErrorActionPreference = "Stop"
@@ -55,6 +57,7 @@ function Clean-EpisodeTitle([string]$title) {
   $t = ($title -replace '\s+', ' ').Trim()
   $t = $t -replace '(?i)\s*,\s*with Commentary\s*', ' '
   $t = $t -replace '(?i)\s*\((?:480p|720p|1080p|2160p)[^)]*\)\s*$', ''
+  $t = $t -replace '\s*\(\d{4}(?:\s*[-–]\s*[^)]+)?\)\s*$', ''
   return ($t -replace '\s+', ' ').Trim()
 }
 
@@ -68,7 +71,37 @@ function Get-EpisodeTitle([string]$baseName) {
   if ($baseName -match '(?i)^\d{1,2}x\d{1,3}\s*[-.]?\s*(.+)$') {
     return (Clean-EpisodeTitle $Matches[1])
   }
+  # "01. Justice League - The New Frontier (2008)" or file without Ep code
+  if ($baseName -match '^\d{1,2}\.\s*(.+)$') {
+    return (Clean-EpisodeTitle $Matches[1])
+  }
   return (Clean-EpisodeTitle $baseName)
+}
+
+function Get-EpisodeInfoFromPath([System.IO.FileInfo]$file) {
+  $info = Get-EpisodeInfo $file.BaseName
+  if ($info) { return $info }
+  if (-not $NumberedFolders) { return $null }
+  # Walk up from file: "01. Movie Title\file.mp4"
+  $dir = $file.Directory
+  $rootPath = (Resolve-Path -LiteralPath $SourceDir).Path
+  while ($dir -and ($dir.FullName.Length -ge $rootPath.Length)) {
+    if ($dir.Name -match '^(?<n>\d{1,2})\.\s*(?<title>.+)$') {
+      return [pscustomobject]@{
+        Season  = $DefaultSeason
+        Episode = [int]$Matches["n"]
+        Title   = (Clean-EpisodeTitle $Matches["title"])
+      }
+    }
+    if ($dir.FullName -eq $rootPath) { break }
+    $dir = $dir.Parent
+  }
+  # Single-film SourceDir (e.g. Return of the Joker) — one episode
+  return [pscustomobject]@{
+    Season  = $DefaultSeason
+    Episode = 1
+    Title   = (Get-EpisodeTitle $file.BaseName)
+  }
 }
 
 function Get-EpisodeInfo([string]$baseName) {
@@ -95,6 +128,14 @@ function Get-EpisodeInfo([string]$baseName) {
       Episode = [int]$Matches["episode"]
     }
   }
+  # Flat movie packs: "1. Batman - Mask of The Phantasm (1993 - 480p DVDRip).mp4"
+  if ($NumberedFolders -and ($baseName -match '^(?<n>\d{1,2})\.\s*(?<title>.+)$')) {
+    return [pscustomobject]@{
+      Season  = $DefaultSeason
+      Episode = [int]$Matches["n"]
+      Title   = (Clean-EpisodeTitle $Matches["title"])
+    }
+  }
   return $null
 }
 
@@ -118,17 +159,37 @@ function Ensure-CatalogSeries(
   if ($Insecure) { Enable-InsecureTls }
   if (-not $Title) {
     $known = @{
-      "x-men-97"                 = "X-Men '97"
-      "batman-animated"          = "Batman: The Animated Series"
-      "batman-new-adventures"    = "The New Batman Adventures"
-      "batman-beyond"            = "Batman Beyond"
-      "the-batman-2004"          = "The Batman (2004)"
-      "batman-brave-bold"        = "Batman: The Brave and the Bold"
-      "beware-the-batman"        = "Beware the Batman"
-      "spiderman-animated"       = "Spider-Man: The Animated Series"
+      "x-men-97"                      = "X-Men '97"
+      "batman-animated"               = "Batman: The Animated Series"
+      "batman-new-adventures"         = "The New Batman Adventures"
+      "the-batman-2004"               = "The Batman (2004)"
+      "batman-phantasm"               = "Batman: Mask of the Phantasm"
+      "batman-subzero"                = "Batman & Mr. Freeze: SubZero"
+      "batman-tas-movies"             = "Batman TAS Movies"
+      "batman-return-of-the-joker"    = "Batman Beyond: Return of the Joker"
+      "justice-league-movies"         = "Justice League Animated Movies"
+      "spiderman-animated"            = "Spider-Man: The Animated Series"
     }
     if ($known.ContainsKey($Slug)) { $Title = $known[$Slug] }
     else { $Title = ($Slug -replace '-', ' ') }
+  }
+  $artwork = @{
+    "batman-animated"            = @("/movies/batman-tas-poster.jpg", "/movies/batman-tas-backdrop.jpg")
+    "batman-new-adventures"      = @("/movies/batman-tnba-poster.jpg", "/movies/batman-tnba-backdrop.jpg")
+    "the-batman-2004"            = @("/movies/the-batman-2004-poster.jpg", "/movies/the-batman-2004-backdrop.jpg")
+    "batman-phantasm"            = @("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg")
+    "batman-subzero"             = @("/movies/batman-subzero-poster.jpg", "/movies/batman-subzero-backdrop.jpg")
+    "batman-tas-movies"          = @("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg")
+    "batman-return-of-the-joker" = @("/movies/batman-rotoj-poster.jpg", "/movies/batman-rotoj-backdrop.jpg")
+    "justice-league-movies"      = @("/movies/poster-1.png", "/movies/hero-backdrop.png")
+    "spiderman-animated"         = @("/movies/spiderman-tas-poster.jpg", "/movies/spiderman-tas-backdrop.jpg")
+    "x-men-97"                   = @("/movies/x-men-97-poster.webp", "/movies/x-men-97-backdrop.webp")
+  }
+  $posterKey = "/movies/poster-1.png"
+  $backdropKey = "/movies/hero-backdrop.png"
+  if ($artwork.ContainsKey($Slug)) {
+    $posterKey = $artwork[$Slug][0]
+    $backdropKey = $artwork[$Slug][1]
   }
   # Probe: GET series; if 404, POST create. Retry once (first TLS handshake can fail transiently).
   $getUri = "$Api/series/$Slug"
@@ -157,12 +218,25 @@ function Ensure-CatalogSeries(
   if ($Slug -match '(?i)^x-?men') { $franchise = "x-men" }
   elseif ($Slug -match '(?i)spider') { $franchise = "spiderman" }
   elseif ($Slug -match '(?i)batman') { $franchise = "batman" }
+  elseif ($Slug -match '(?i)justice') { $franchise = "justice-league" }
+  $yearStart = 2024
+  if ($Slug -eq "batman-animated") { $yearStart = 1992 }
+  elseif ($Slug -eq "batman-new-adventures") { $yearStart = 1997 }
+  elseif ($Slug -eq "the-batman-2004") { $yearStart = 2004 }
+  elseif ($Slug -eq "batman-phantasm") { $yearStart = 1993 }
+  elseif ($Slug -eq "batman-subzero") { $yearStart = 1998 }
+  elseif ($Slug -eq "batman-return-of-the-joker") { $yearStart = 2000 }
+  elseif ($Slug -eq "spiderman-animated") { $yearStart = 1994 }
+  elseif ($Slug -eq "justice-league-movies") { $yearStart = 2008 }
+  elseif ($Slug -eq "batman-tas-movies") { $yearStart = 1993 }
   $body = @{
     slug          = $Slug
     title         = $Title
     english_title = $Title
     franchise     = $franchise
-    year_start    = 2024
+    year_start    = $yearStart
+    poster_key    = $posterKey
+    backdrop_key  = $backdropKey
   } | ConvertTo-Json
   try {
     Invoke-RestMethod -Method Post -Uri $postUri -ContentType "application/json" -Body $body | Out-Null
@@ -267,6 +341,7 @@ if (-not $SkipUpload) { Require-Cmd mc }
 
 $candidates = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
   if ($_.Extension -notmatch '(?i)^\.(mp4|mkv|m4v|mov)$') { return $false }
+  if ($_.BaseName -match '(?i)^sample$|\bsample\b') { return $false }
   if (Test-IsExtraPath $_.FullName) { return $false }
   if ($ExcludePathPattern -and ($_.FullName -match $ExcludePathPattern)) { return $false }
   $true
@@ -279,16 +354,22 @@ if (-not $candidates) {
 # Remap absolute episode numbers per season (BTAS Vol2 S02E29 -> S02E01).
 $parsed = @()
 foreach ($f in $candidates) {
-  $info = Get-EpisodeInfo $f.BaseName
+  $info = Get-EpisodeInfoFromPath $f
   if (-not $info) {
-    Write-Warning "Skip (cannot parse SxxExx / 01x01 / Ep.NN): $($f.Name)"
+    Write-Warning "Skip (cannot parse SxxExx / 01x01 / Ep.NN / numbered folder): $($f.Name)"
     continue
+  }
+  $title = $null
+  if ($info.PSObject.Properties.Name -contains "Title" -and $info.Title) {
+    $title = $info.Title
+  } else {
+    $title = Get-EpisodeTitle $f.BaseName
   }
   $parsed += [pscustomobject]@{
     File    = $f
     Season  = $info.Season
     Episode = $info.Episode
-    Title   = (Get-EpisodeTitle $f.BaseName)
+    Title   = $title
   }
 }
 
