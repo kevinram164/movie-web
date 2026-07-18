@@ -179,9 +179,9 @@ function Ensure-CatalogSeries(
     "the-batman-2004"            = @("/movies/the-batman-2004-poster.jpg", "/movies/the-batman-2004-backdrop.jpg")
     "batman-phantasm"            = @("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg")
     "batman-subzero"             = @("/movies/batman-subzero-poster.jpg", "/movies/batman-subzero-backdrop.jpg")
-    "batman-tas-movies"          = @("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg")
+    "batman-tas-movies"          = @("/movies/batman-tas-movies-poster.jpg", "/movies/batman-tas-movies-backdrop.jpg")
     "batman-return-of-the-joker" = @("/movies/batman-rotoj-poster.jpg", "/movies/batman-rotoj-backdrop.jpg")
-    "justice-league-movies"      = @("/movies/poster-1.png", "/movies/hero-backdrop.png")
+    "justice-league-movies"      = @("/movies/justice-league-movies-poster.jpg", "/movies/justice-league-movies-backdrop.jpg")
     "spiderman-animated"         = @("/movies/spiderman-tas-poster.jpg", "/movies/spiderman-tas-backdrop.jpg")
     "x-men-97"                   = @("/movies/x-men-97-poster.webp", "/movies/x-men-97-backdrop.webp")
   }

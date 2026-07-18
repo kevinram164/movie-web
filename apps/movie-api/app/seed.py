@@ -282,6 +282,57 @@ ANIMATION_SERIES = [
             },
         ],
     },
+    {
+        "slug": "batman-tas-movies",
+        "title": "Batman TAS Movies",
+        "english_title": "Batman: The Animated Series Movies",
+        "description": (
+            "Mask of the Phantasm và Batman & Mr. Freeze: SubZero — "
+            "hai phim điện ảnh / DTV trong vũ trụ BTAS."
+        ),
+        "year_start": 1993,
+        "franchise": "batman",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/batman-tas-movies-poster.jpg",
+        "backdrop_key": "/movies/batman-tas-movies-backdrop.jpg",
+        "rating": "8.4",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Films",
+                "episodes": [
+                    ("Mask of the Phantasm", "Batman, Joker và bí ẩn Phantasm."),
+                    ("SubZero", "Mr. Freeze bắt cóc Barbara Gordon."),
+                ],
+            },
+        ],
+    },
+    {
+        "slug": "justice-league-movies",
+        "title": "Justice League Animated Movies",
+        "english_title": "Justice League Animated Movies",
+        "description": (
+            "Pack phim hoạt hình Justice League (2008–2020): New Frontier, "
+            "Flashpoint, War, Throne of Atlantis, Apokolips War và các phần khác."
+        ),
+        "year_start": 2008,
+        "franchise": "justice-league",
+        "genre": "Hoạt hình",
+        "poster_key": "/movies/justice-league-movies-poster.jpg",
+        "backdrop_key": "/movies/justice-league-movies-backdrop.jpg",
+        "rating": "8.0",
+        "seasons": [
+            {
+                "number": 1,
+                "title": "Films",
+                "episodes": [
+                    ("The New Frontier", "JL thời kỳ Cold War."),
+                    ("Crisis on Two Earths", "Crime Syndicate từ thế giới song song."),
+                    ("Doom", "Legion of Doom."),
+                ],
+            },
+        ],
+    },
 ]
 
 # poster/backdrop paths under Next.js public/ — used by seed + sync on API startup
@@ -294,7 +345,9 @@ SERIES_ARTWORK: dict[str, tuple[str, str]] = {
     "the-batman-2004": ("/movies/the-batman-2004-poster.jpg", "/movies/the-batman-2004-backdrop.jpg"),
     "batman-phantasm": ("/movies/batman-phantasm-poster.jpg", "/movies/batman-phantasm-backdrop.jpg"),
     "batman-subzero": ("/movies/batman-subzero-poster.jpg", "/movies/batman-subzero-backdrop.jpg"),
+    "batman-tas-movies": ("/movies/batman-tas-movies-poster.jpg", "/movies/batman-tas-movies-backdrop.jpg"),
     "batman-return-of-the-joker": ("/movies/batman-rotoj-poster.jpg", "/movies/batman-rotoj-backdrop.jpg"),
+    "justice-league-movies": ("/movies/justice-league-movies-poster.jpg", "/movies/justice-league-movies-backdrop.jpg"),
 }
 
 

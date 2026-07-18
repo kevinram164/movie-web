@@ -280,6 +280,10 @@ def home(db: Session = Depends(get_db)):
                 "title": "Batman",
                 "items": [to_series_card(s).model_dump() for s in rows_series if s.franchise == "batman"],
             },
+            {
+                "title": "Justice League",
+                "items": [to_series_card(s).model_dump() for s in rows_series if s.franchise == "justice-league"],
+            },
         ],
     )
 
@@ -376,6 +380,8 @@ def _guess_franchise(slug: str) -> str:
         return "spiderman"
     if "batman" in s:
         return "batman"
+    if "justice" in s:
+        return "justice-league"
     return "other"
 
 
@@ -424,6 +430,8 @@ def create_episode(slug: str, season_number: int, body: EpisodeCreate, db: Sessi
             "batman-phantasm": "Batman: Mask of the Phantasm",
             "batman-subzero": "Batman & Mr. Freeze: SubZero",
             "batman-return-of-the-joker": "Batman Beyond: Return of the Joker",
+            "batman-tas-movies": "Batman TAS Movies",
+            "justice-league-movies": "Justice League Animated Movies",
             "spiderman-animated": "Spider-Man: The Animated Series",
         }
         pretty = pretty_titles.get(slug, slug.replace("-", " ").title())
