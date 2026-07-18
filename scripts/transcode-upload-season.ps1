@@ -23,7 +23,13 @@ param(
   [switch]$SkipExisting,
   [switch]$SyncCatalog,
   [switch]$Insecure,
-  [switch]$WhatIf
+  [switch]$WhatIf,
+  # Include Extra/Extras folders (default: skip documentaries/bonus)
+  [switch]$IncludeExtras,
+  # Default season when filename uses "Ep. 01" (TNBA / Beware the Batman)
+  [int]$DefaultSeason = 1,
+  # Skip relative paths matching this regex (e.g. 'Volume 4' when uploading BTAS only)
+  [string]$ExcludePathPattern = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,17 +51,31 @@ function Get-McArgs {
   return @()
 }
 
+function Clean-EpisodeTitle([string]$title) {
+  $t = ($title -replace '\s+', ' ').Trim()
+  $t = $t -replace '(?i)\s*,\s*with Commentary\s*', ' '
+  $t = $t -replace '(?i)\s*\((?:480p|720p|1080p|2160p)[^)]*\)\s*$', ''
+  return ($t -replace '\s+', ' ').Trim()
+}
+
 function Get-EpisodeTitle([string]$baseName) {
   if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[-.]\s*(.+)$') {
-    return ($Matches[1] -replace '\s+', ' ').Trim()
+    return (Clean-EpisodeTitle $Matches[1])
+  }
+  if ($baseName -match '(?i)Ep\.?\s*\d{1,3}\s*[-.]\s*(.+)$') {
+    return (Clean-EpisodeTitle $Matches[1])
   }
   if ($baseName -match '(?i)^\d{1,2}x\d{1,3}\s*[-.]?\s*(.+)$') {
-    return ($Matches[1] -replace '\s+', ' ').Trim()
+    return (Clean-EpisodeTitle $Matches[1])
   }
-  return $baseName
+  return (Clean-EpisodeTitle $baseName)
 }
 
 function Get-EpisodeInfo([string]$baseName) {
+  # Skip bonus tracks named "S01 Extra 01" (not real episodes)
+  if ($baseName -match '(?i)S\d{1,2}\s+Extra\s+\d') {
+    return $null
+  }
   if ($baseName -match '(?i)S(?<season>\d{1,2})\s*E(?<episode>\d{1,3})') {
     return [pscustomobject]@{
       Season  = [int]$Matches["season"]
@@ -68,7 +88,19 @@ function Get-EpisodeInfo([string]$baseName) {
       Episode = [int]$Matches["episode"]
     }
   }
+  # "The New Batman Adventures - Ep. 01 - Title" / "Beware the Batman - Ep. 01 - Title"
+  if ($baseName -match '(?i)Ep\.?\s*(?<episode>\d{1,3})') {
+    return [pscustomobject]@{
+      Season  = $DefaultSeason
+      Episode = [int]$Matches["episode"]
+    }
+  }
   return $null
+}
+
+function Test-IsExtraPath([string]$fullPath) {
+  if ($IncludeExtras) { return $false }
+  return ($fullPath -match '(?i)[\\/]Extras?[\\/]' -or $fullPath -match '(?i)S\d{1,2}\s+Extra\s+\d')
 }
 
 function Enable-InsecureTls {
@@ -85,7 +117,17 @@ function Ensure-CatalogSeries(
 ) {
   if ($Insecure) { Enable-InsecureTls }
   if (-not $Title) {
-    if ($Slug -eq "x-men-97") { $Title = "X-Men '97" }
+    $known = @{
+      "x-men-97"                 = "X-Men '97"
+      "batman-animated"          = "Batman: The Animated Series"
+      "batman-new-adventures"    = "The New Batman Adventures"
+      "batman-beyond"            = "Batman Beyond"
+      "the-batman-2004"          = "The Batman (2004)"
+      "batman-brave-bold"        = "Batman: The Brave and the Bold"
+      "beware-the-batman"        = "Beware the Batman"
+      "spiderman-animated"       = "Spider-Man: The Animated Series"
+    }
+    if ($known.ContainsKey($Slug)) { $Title = $known[$Slug] }
     else { $Title = ($Slug -replace '-', ' ') }
   }
   # Probe: GET series; if 404, POST create. Retry once (first TLS handshake can fail transiently).
@@ -224,29 +266,62 @@ Require-Cmd ffmpeg
 if (-not $SkipUpload) { Require-Cmd mc }
 
 $candidates = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
-  $_.Extension -match '(?i)^\.(mp4|mkv|m4v|mov)$'
+  if ($_.Extension -notmatch '(?i)^\.(mp4|mkv|m4v|mov)$') { return $false }
+  if (Test-IsExtraPath $_.FullName) { return $false }
+  if ($ExcludePathPattern -and ($_.FullName -match $ExcludePathPattern)) { return $false }
+  $true
 })
 if (-not $candidates) {
   throw "No video files (.mp4/.mkv) in: $SourceDir"
 }
 
-# One source per episode. Prefer the smaller MP4 when both MP4 and MKV exist.
+# One source per episode. Prefer MP4 when both MP4 and MKV exist.
+# Remap absolute episode numbers per season (BTAS Vol2 S02E29 -> S02E01).
+$parsed = @()
+foreach ($f in $candidates) {
+  $info = Get-EpisodeInfo $f.BaseName
+  if (-not $info) {
+    Write-Warning "Skip (cannot parse SxxExx / 01x01 / Ep.NN): $($f.Name)"
+    continue
+  }
+  $parsed += [pscustomobject]@{
+    File    = $f
+    Season  = $info.Season
+    Episode = $info.Episode
+    Title   = (Get-EpisodeTitle $f.BaseName)
+  }
+}
+
 $videos = @(
-  $candidates |
-    Group-Object {
-      $info = Get-EpisodeInfo $_.BaseName
-      if ($info) { "{0:D2}x{1:D3}" -f $info.Season, $info.Episode }
-      else { "unparsed:$($_.FullName)" }
+  $parsed |
+    Group-Object Season |
+    ForEach-Object {
+      $seasonNum = [int]$_.Name
+      $minEp = [int](($_.Group | Measure-Object -Property Episode -Minimum).Minimum)
+      $offset = 0
+      if ($minEp -gt 1) {
+        $offset = $minEp - 1
+        Write-Host "==> Remap S$seasonNum absolute eps: E$minEp+ -> E1+ (offset -$offset)"
+      }
+      $_.Group | ForEach-Object {
+        [pscustomobject]@{
+          File    = $_.File
+          Season  = $seasonNum
+          Episode = [int]($_.Episode - $offset)
+          Title   = $_.Title
+        }
+      }
     } |
+    Group-Object { "{0:D2}x{1:D3}" -f ([int]$_.Season), ([int]$_.Episode) } |
     ForEach-Object {
       $_.Group |
         Sort-Object @{
           Expression = {
-            if ($_.Extension -ieq ".mp4") { 0 }
-            elseif ($_.Extension -ieq ".mkv") { 1 }
+            if ($_.File.Extension -ieq ".mp4") { 0 }
+            elseif ($_.File.Extension -ieq ".mkv") { 1 }
             else { 2 }
           }
-        }, Length |
+        }, { $_.File.Length } |
         Select-Object -First 1
     }
 )
@@ -258,21 +333,15 @@ $ok = 0
 $skip = 0
 $fail = 0
 
-foreach ($vid in $videos | Sort-Object Name) {
-  $info = Get-EpisodeInfo $vid.BaseName
-  if (-not $info) {
-    Write-Warning "Skip (cannot parse SxxExx or 01x01): $($vid.Name)"
-    $fail++
-    continue
-  }
-
-  $season = $info.Season
-  $episode = $info.Episode
+foreach ($item in $videos | Sort-Object Season, Episode) {
+  $vid = $item.File
+  $season = $item.Season
+  $episode = $item.Episode
   $epCode = "s{0:D2}e{1:D2}" -f $season, $episode
   $objectPrefix = "$SeriesSlug/$epCode"
   $masterKey = "$objectPrefix/master.m3u8"
   $work = Join-Path $env:TEMP "cinehome-hls-$SeriesSlug-$epCode"
-  $title = Get-EpisodeTitle $vid.BaseName
+  $title = $item.Title
 
   Write-Host ""
   Write-Host "---- $($vid.Name)"
