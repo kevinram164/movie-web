@@ -157,4 +157,5 @@ export const genreCategories = [
   "X-Men",
   "Spider-Man",
   "Batman",
+  "Justice League",
 ]

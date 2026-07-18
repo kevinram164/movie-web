@@ -11,7 +11,7 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: 'CineHome — Animation series tại nhà',
-  description: 'X-Men, Spider-Man, Batman Animations trên OpenShift + MinIO.',
+  description: 'X-Men, Spider-Man, Batman, Justice League trên OpenShift + MinIO.',
   generator: 'cinehome',
   icons: {
     icon: [

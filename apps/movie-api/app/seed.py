@@ -414,17 +414,34 @@ def seed_series(db: Session) -> int:
 
 
 def sync_series_artwork(db: Session) -> int:
-    """Update artwork for existing rows; seed_series intentionally skips them."""
+    """Update artwork (+ franchise) for existing rows; seed_series intentionally skips them."""
+    franchise_by_slug = {
+        "x-men-animated": "x-men",
+        "x-men-97": "x-men",
+        "spiderman-animated": "spiderman",
+        "batman-animated": "batman",
+        "batman-new-adventures": "batman",
+        "the-batman-2004": "batman",
+        "batman-phantasm": "batman",
+        "batman-subzero": "batman",
+        "batman-tas-movies": "batman",
+        "batman-return-of-the-joker": "batman",
+        "justice-league-movies": "justice-league",
+    }
     updated = 0
     changed = False
     for slug, (poster_key, backdrop_key) in SERIES_ARTWORK.items():
         series = db.query(Series).filter(Series.slug == slug).first()
         if not series:
             continue
+        want_franchise = franchise_by_slug.get(slug)
         if series.poster_key != poster_key or series.backdrop_key != backdrop_key:
             series.poster_key = poster_key
             series.backdrop_key = backdrop_key
             updated += 1
+            changed = True
+        if want_franchise and series.franchise != want_franchise:
+            series.franchise = want_franchise
             changed = True
         for season in series.seasons:
             for episode in season.episodes:
