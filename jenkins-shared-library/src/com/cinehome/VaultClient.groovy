@@ -3,7 +3,7 @@ package com.cinehome
 /**
  * Vault KV v2 qua Kubernetes auth (SA jenkins-kaniko).
  * Không dùng Jenkins Credential Store — giống banking-demo.
- * Parse JSON bằng steps.readJSON — tránh Script Approval JsonSlurperClassic.
+ * Parse JSON bằng steps.readJSON — cần plugin pipeline-utility-steps.
  */
 class VaultClient implements Serializable {
 

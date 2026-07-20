@@ -1,4 +1,4 @@
-@Library('cinehome') _
+@Library('cinehome@main') _
 
 // BUILD_TARGET: auto | all | movie-api | movie-web | media-worker
 // Kaniko + Vault SA jenkins-kaniko (cùng pattern banking-demo)

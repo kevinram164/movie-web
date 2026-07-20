@@ -49,6 +49,8 @@ spec:
             - configuration-as-code:2100.vb_fd699d2a_09c
             - pipeline-groovy-lib:798.v5cc688825312
             - durable-task:686.v80ff80875b_82
+            # readJSON / writeJSON (VaultClient shared library)
+            - pipeline-utility-steps:2.19.0
           additionalPlugins: []
           overwritePlugins: true
           overwritePluginsFromImage: false
