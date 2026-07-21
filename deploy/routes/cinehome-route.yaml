@@ -7,7 +7,8 @@ metadata:
     app.kubernetes.io/name: cinehome
     app.kubernetes.io/component: movie-web
 spec:
-  host: cinehome.automationecom.click
+  # Nội bộ OCP. Public: Cloudflare Tunnel → movie-web.npd-movie.svc:8080
+  host: cinehome.apps.ocp01.npd.co
   path: /
   to:
     kind: Service
