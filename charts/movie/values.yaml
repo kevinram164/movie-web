@@ -33,7 +33,7 @@ movieApi:
     MEDIA_QUEUE: "cinehome:media:jobs"
     REDIS_SENTINEL_MASTER: "mymaster"
     REDIS_SENTINEL_PORT: "26379"
-    CORS_ORIGINS: "https://cinehome.apps.ocp01.npd.co,*"
+    CORS_ORIGINS: "https://cinehome.automationecom.click,https://cinehome.apps.ocp01.npd.co"
     SEED_DEMO_DATA: "true"
   # Keys lấy từ appSecretName
   secretEnvKeys:
