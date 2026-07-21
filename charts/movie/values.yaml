@@ -29,7 +29,8 @@ movieApi:
     MINIO_BUCKET_MOVIES: "movies"
     MINIO_BUCKET_POSTERS: "posters"
     MINIO_BUCKET_RAW: "raw"
-    MINIO_PUBLIC_URL: "https://minio-api-minio.apps.ocp01.npd.co"
+    # Media proxy cùng origin (/media → MinIO nội bộ). KHÔNG expose MinIO ra Internet.
+    MINIO_PUBLIC_URL: "/media"
     MEDIA_QUEUE: "cinehome:media:jobs"
     REDIS_SENTINEL_MASTER: "mymaster"
     REDIS_SENTINEL_PORT: "26379"
@@ -53,6 +54,8 @@ movieWeb:
     port: 8080
   env:
     API_PROXY_TARGET: "http://movie-api:8080"
+    # Proxy media (HLS/poster) tới MinIO nội bộ — browser không nói chuyện trực tiếp với MinIO
+    MEDIA_PROXY_TARGET: "http://minio.minio.svc.cluster.local:9000"
     PORT: "8080"
   resources:
     requests:
