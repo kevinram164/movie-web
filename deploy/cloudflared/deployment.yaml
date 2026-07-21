@@ -1,5 +1,5 @@
 # Cloudflare remotely-managed tunnel for cinehome.automationecom.click.
-# Create Secret cloudflared-token before syncing; never commit the token.
+# Token: Vault secret/cinehome/cloudflared → ESO → Secret cloudflared-token (không commit token).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
