@@ -68,7 +68,7 @@ spec:
       kind: ClusterRoleBinding
     - group: apiregistration.k8s.io
       kind: APIService
-    # SCC minio-uid1001 (infra-minio, deploy/minio-prereq)
+    # SCC minio/postgres/redis-uid1001 (Bitnami + NFS)
     - group: security.openshift.io
       kind: SecurityContextConstraints
     - group: coroot.com

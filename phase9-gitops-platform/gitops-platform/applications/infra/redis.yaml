@@ -12,6 +12,10 @@ metadata:
 spec:
   project: cinehome-platform
   sources:
+    # SCC redis-uid1001 — Bitnami UID 1001 (trước chart)
+    - repoURL: https://github.com/kevinram164/movie-web.git
+      targetRevision: main
+      path: phase9-gitops-platform/gitops-platform/manifests/redis-prereq
     - repoURL: https://charts.bitnami.com/bitnami
       chart: redis
       targetRevision: 20.6.2

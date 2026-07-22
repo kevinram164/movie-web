@@ -12,6 +12,10 @@ metadata:
 spec:
   project: cinehome-platform
   sources:
+    # SCC postgres-uid1001 — Bitnami UID 1001 + seccomp (trước chart)
+    - repoURL: https://github.com/kevinram164/movie-web.git
+      targetRevision: main
+      path: phase9-gitops-platform/gitops-platform/manifests/postgres-prereq
     - repoURL: https://charts.bitnami.com/bitnami
       chart: postgresql
       targetRevision: 15.5.32

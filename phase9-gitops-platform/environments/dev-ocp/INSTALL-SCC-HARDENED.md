@@ -122,6 +122,9 @@ Một số component **không** fit `nonroot` cả namespace — gán **privileg
 | `csi-driver-nfs` | node/controller plugin | `privileged` → `csi-nfs-node-sa`, `csi-nfs-controller-sa` |
 | `platform` | Harbor (jobservice, core, …) | `harbor-uid-range` → SA `harbor` (UID **999–10000**) — `harbor-scc-setup.sh` |
 | `kong` | Kong HA (UID 1000) | `kong-uid1000` → SA `kong-kong` — `kong-scc-setup.sh` |
+| `postgres` | Bitnami Postgres (UID **1001**) | `postgres-uid1001` — Argo `postgres-prereq` / `postgres-scc-setup.sh` |
+| `redis` | Bitnami Redis (UID **1001**) | `redis-uid1001` — Argo `redis-prereq` / `redis-scc-setup.sh` |
+| `minio` | Bitnami MinIO (UID **1001**) | `minio-uid1001` — `deploy/minio-prereq` |
 | `linkerd` / `linkerd-viz` | control plane + viz | `privileged` → group SA — `linkerd-scc-setup.sh` |
 
 Xem [INSTALL-NFS-CSI.md](./INSTALL-NFS-CSI.md) §3.3.

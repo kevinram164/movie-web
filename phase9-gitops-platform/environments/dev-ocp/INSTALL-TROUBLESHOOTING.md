@@ -33,10 +33,34 @@ NFS CSI (INSTALL-NFS-CSI.md)
 | `argocd` | ArgoCD upstream | `namespace-scc-setup.sh argocd` |
 | `platform` | Jenkins | `namespace-scc-setup.sh platform` |
 | `platform` | Harbor | **`harbor-scc-setup.sh`** — UID **999–10000**, không patch dải OCP |
+| `postgres` / `redis` / `minio` | Bitnami + NFS | SCC **UID 1001** (prereq Argo) — **không** `restricted-v2` |
 | `vault` | Vault server | `namespace-scc-setup.sh vault` + image UBI (xem §2) |
 | `csi-driver-nfs` | NFS CSI | `ocp-values/nfs-csi/scc.sh` — privileged |
 
 Chi tiết SCC: [INSTALL-SCC-HARDENED.md](./INSTALL-SCC-HARDENED.md)
+
+### 1.1 Postgres / Redis — `Permission denied` trên `/bitnami/.../data` (NFS)
+
+**Triệu chứng:** SCC annotation = `restricted-v2`; NFS `data/` = `drwxrws--- 1001:1000850000`; log Bitnami `ls: ... Permission denied`.
+
+**Nguyên nhân:** Pod UID dải namespace ≠ owner 1001; NFS không áp dụng fsGroup → bit group vô hiệu.
+
+**Sửa bền:**
+
+```bash
+# Bastion (trước hoặc thay Argo sync prereq)
+./phase9-gitops-platform/environments/dev-ocp/scripts/postgres-scc-setup.sh
+./phase9-gitops-platform/environments/dev-ocp/scripts/redis-scc-setup.sh
+
+# NFS server — khớp UID 1001
+chown -R 1001:1001 /shares/registry/postgres/
+chown -R 1001:1001 /shares/registry/redis/
+
+# Sau khi Argo sync values (runAsUser 1001)
+oc delete pod -n postgres -l app.kubernetes.io/name=postgresql --force --grace-period=0
+```
+
+Kỳ vọng: `openshift.io/scc=postgres-uid1001` (hoặc `redis-uid1001`), `id` → `uid=1001`.
 
 ---
 

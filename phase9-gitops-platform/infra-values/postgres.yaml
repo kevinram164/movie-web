@@ -5,6 +5,9 @@
 # Secret cluster: postgres-ha-postgresql
 #   keys: password, postgres-password, replication-password
 # CineHome: Job movie-db-init tạo thêm ROLE/DB `movie` trên cùng instance
+#
+# OCP + NFS: cố định UID 1001 (SCC postgres-uid1001) — không dùng restricted-v2.
+# NFS data phải chown 1001:1001 (fsGroup trên NFS không đáng tin).
 architecture: replication
 
 auth:
@@ -21,7 +24,29 @@ replication:
   numSynchronousReplicas: 0
   applicationName: my_application
 
+serviceAccount:
+  create: true
+  name: postgres-ha-postgresql
+
+# Init container root chmod — fail trên OCP restricted; UID 1001 đã khớp NFS thì không cần
+volumePermissions:
+  enabled: false
+
 primary:
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroupChangePolicy: OnRootMismatch
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
   persistence:
     enabled: true
     storageClass: nfs-csi
@@ -36,6 +61,20 @@ primary:
 
 readReplicas:
   replicaCount: 1
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroupChangePolicy: OnRootMismatch
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
   persistence:
     enabled: true
     storageClass: nfs-csi
