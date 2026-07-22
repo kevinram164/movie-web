@@ -26,3 +26,11 @@ oc apply -f phase9-gitops-platform/environments/dev-ocp/argocd/applications/cine
 ```
 
 Chi tiết: [../../OCP-DEPLOY-GUIDE.md](../../OCP-DEPLOY-GUIDE.md)
+
+## Runbook
+
+| Doc | Nội dung |
+|-----|----------|
+| [DISK-MONITORING.md](./DISK-MONITORING.md) | PVC/NFS, độ nở dữ liệu, disk master/worker, retention |
+| [INSTALL-TROUBLESHOOTING.md](./INSTALL-TROUBLESHOOTING.md) | Lỗi SCC, Harbor, Vault, NFS |
+| [INSTALL-NFS-CSI.md](./INSTALL-NFS-CSI.md) | Cài NFS CSI |

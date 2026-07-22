@@ -14,6 +14,7 @@ Runbook xử lý lỗi thường gặp khi triển khai Phase 9 trên **OpenShif
 6. [Jenkins & External Secrets](#6-jenkins--external-secrets)
 7. [Lệnh chẩn đoán nhanh](#7-lệnh-chẩn-đoán-nhanh)
 8. [Script tham chiếu](#8-script-tham-chiếu)
+9. [Disk / PVC / retention](#9-disk--pvc--retention)
 
 ---
 
@@ -407,6 +408,10 @@ argocd app get platform-vault
 | `scripts/coroot-scc-setup.sh` | SCC UID 65534 cho Coroot embedded Prometheus |
 | `scripts/coroot-node-agent-scc-setup.sh` | privileged SCC cho Coroot node-agent DaemonSet |
 | `scripts/kong-scc-setup.sh` | SCC UID 1000 cho Kong (`kong-uid1000`) |
+| `scripts/postgres-scc-setup.sh` | SCC UID 1001 Postgres + NFS |
+| `scripts/redis-scc-setup.sh` | SCC UID 1001 Redis + NFS |
+| `scripts/disk-audit.sh` | Audit disk node + PVC quota (bastion) |
+| `scripts/nfs-pvc-audit.sh` | Audit dung lượng PVC trên NFS server |
 | `scripts/linkerd-scc-setup.sh` | privileged cho ns `linkerd` + `linkerd-viz` + **`banking`** (sidecar mesh) |
 | `scripts/linkerd-load-xt-modules.sh` | modprobe xt_multiport/… trên node (fix linkerd-init) |
 | `scripts/approve-pending-csrs.sh` | Approve CSR Pending (UPI lab) |
@@ -551,11 +556,29 @@ argocd app sync platform-harbor
 
 ---
 
+## 9. Disk / PVC / retention
+
+Runbook đầy đủ: **[DISK-MONITORING.md](./DISK-MONITORING.md)**
+
+Tóm tắt:
+
+| Lớp | Cách đo | Script |
+|-----|---------|--------|
+| PVC quota | `oc get pvc -A` | `scripts/disk-audit.sh` (bastion) |
+| Dung lượng thực NFS | `du` trên `/shares/registry` | `scripts/nfs-pvc-audit.sh` (NFS server) |
+| Disk master/worker | `oc debug node/... -- chroot /host df` | `scripts/disk-audit.sh` |
+| Độ nở | Snapshot log hàng ngày, `diff` 2 file | Cron trong DISK-MONITORING §5 |
+
+**Ưu tiên retention lab:** Postgres 1Gi, MinIO buckets, Harbor GC, Prometheus retention, Jenkins old builds, `crictl rmi --prune` trên worker.
+
+---
+
 ## Liên kết
 
 | Tài liệu | Nội dung |
 |----------|----------|
 | [OCP-DEPLOY-GUIDE.md](../../OCP-DEPLOY-GUIDE.md) | Triển khai end-to-end |
+| [DISK-MONITORING.md](./DISK-MONITORING.md) | PVC, NFS, node disk, retention |
 | [INSTALL-SCC-HARDENED.md](./INSTALL-SCC-HARDENED.md) | SCC namespace |
 | [INSTALL-NFS-CSI.md](./INSTALL-NFS-CSI.md) | NFS storage |
 | [INSTALL-ARGOCD-UPSTREAM.md](./INSTALL-ARGOCD-UPSTREAM.md) | ArgoCD + Route |
