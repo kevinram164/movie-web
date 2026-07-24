@@ -9,7 +9,7 @@ movieApi:
 movieWeb:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-web
-    tag: "d95eba2"
+    tag: "ca83a35"
     pullPolicy: Always
 
 mediaWorker:
