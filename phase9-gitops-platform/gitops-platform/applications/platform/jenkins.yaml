@@ -83,18 +83,43 @@ spec:
           JCasC:
             defaultConfig: true
             configScripts:
-              cinehome-shared-library: |
+              platform-shared-library: |
                 unclassified:
                   globalLibraries:
                     libraries:
+                      - name: "platform"
+                        defaultVersion: "main"
+                        retriever:
+                          modernSCM:
+                            libraryPath: ""
+                            scm:
+                              git:
+                                remote: "https://github.com/kevinram164/jenkins-shared-library.git"
+                      # Temporary aliases during migration (same central repo)
                       - name: "cinehome"
                         defaultVersion: "main"
                         retriever:
                           modernSCM:
-                            libraryPath: "jenkins-shared-library"
+                            libraryPath: ""
                             scm:
                               git:
-                                remote: "https://github.com/kevinram164/movie-web.git"
+                                remote: "https://github.com/kevinram164/jenkins-shared-library.git"
+                      - name: "banking-demo"
+                        defaultVersion: "main"
+                        retriever:
+                          modernSCM:
+                            libraryPath: ""
+                            scm:
+                              git:
+                                remote: "https://github.com/kevinram164/jenkins-shared-library.git"
+                      - name: "aiops"
+                        defaultVersion: "main"
+                        retriever:
+                          modernSCM:
+                            libraryPath: ""
+                            scm:
+                              git:
+                                remote: "https://github.com/kevinram164/jenkins-shared-library.git"
           ingress:
             enabled: false
         agent:

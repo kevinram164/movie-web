@@ -1,9 +1,10 @@
-@Library('cinehome@main') _
+@Library('platform@main') _
 
 // BUILD_TARGET: auto | all | movie-api | movie-web | media-worker
-// Kaniko + Vault SA jenkins-kaniko (cùng pattern banking-demo)
+// Central library: https://github.com/kevinram164/jenkins-shared-library
 
-cinehomePipeline([
+platformPipeline([
+  project             : 'cinehome',
   harborHost          : 'harbor-platform.apps.ocp01.npd.co',
   harborProject       : 'movie-web',
   gitBranch           : 'main',
