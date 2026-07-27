@@ -1,5 +1,7 @@
 # CineHome — OpenTelemetry (same path as banking)
 # App → opentelemetry-collector.observability → dual Coroot + Instana
+#
+# movie-web (nginx SPA) relies on Coroot eBPF + traces from movie-api behind /api proxy.
 
 movieApi:
   env:

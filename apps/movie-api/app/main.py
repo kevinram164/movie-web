@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,10 +9,12 @@ from sqlalchemy.orm import Session, joinedload
 from app.config import settings
 from app.db import Episode, Movie, Season, Series, get_db, init_db
 from app.minio_client import ensure_buckets, presigned_put_url, public_object_url, put_fileobj
+from app.observability import instrument_fastapi
 from app.queue import enqueue_media_job
 from app.seed import artwork_for_slug, seed_movies, seed_series, sync_series_artwork
 
 app = FastAPI(title=settings.app_name, version="1.1.0")
+instrument_fastapi(app, os.getenv("OTEL_SERVICE_NAME", "movie-api"))
 
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(

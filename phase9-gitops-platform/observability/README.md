@@ -24,4 +24,10 @@ Values OCP (nfs-csi): `values-*-ocp.yaml` trong thư mục này.
 
 ## CineHome
 
-App `npd-movie` có thể bật OTEL qua `gitops/values-observability.yaml` khi cần. Coroot quan sát cluster mà không cần redeploy.
+App `npd-movie` sends OTLP via `gitops/values-observability.yaml` (movie-api + media-worker).
+Same path as banking: collector → Coroot + Instana. Frontend nginx SPA uses Coroot eBPF + API traces.
+
+```bash
+# After rebuild movie-api / media-worker images + Argo sync cinehome
+oc -n npd-movie set env deploy/movie-api --list | grep OTEL_
+```

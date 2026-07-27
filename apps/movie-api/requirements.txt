@@ -7,3 +7,9 @@ pydantic-settings==2.7.0
 minio==7.2.13
 python-multipart==0.0.20
 redis==5.2.1
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp-proto-grpc==1.27.0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-instrumentation-redis==0.48b0
+opentelemetry-instrumentation-sqlalchemy==0.48b0

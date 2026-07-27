@@ -9,6 +9,7 @@ import redis
 from worker.config import settings
 from worker.db import set_episode_status
 from worker.minio_ops import download_object, upload_dir
+from worker.observability import consumer_span, get_tracer, init_tracing
 from worker.redis_client import get_redis_client
 from worker.transcode import transcode_to_hls
 
@@ -79,6 +80,8 @@ def process_job(job: dict) -> None:
 
 
 def main() -> None:
+    init_tracing("media-worker")
+    tracer = get_tracer("media-worker")
     Path(settings.work_dir).mkdir(parents=True, exist_ok=True)
     print(
         f"[media-worker] queue={settings.media_queue} "
@@ -115,7 +118,15 @@ def main() -> None:
             print(f"[warn] bad job payload: {payload[:200]}")
             continue
         try:
-            process_job(job)
+            with consumer_span(
+                tracer,
+                "media-worker.process",
+                {
+                    "messaging.destination": settings.media_queue,
+                    "cinehome.episode_id": str(job.get("episode_id") or ""),
+                },
+            ):
+                process_job(job)
         except Exception:  # noqa: BLE001
             continue
 
