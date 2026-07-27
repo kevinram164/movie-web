@@ -9,7 +9,8 @@ WORKDIR /app
 RUN useradd -u 1001 -r -g 0 -m -d /home/app -s /sbin/nologin app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --force-reinstall "setuptools==75.8.2"
 
 COPY app ./app
 

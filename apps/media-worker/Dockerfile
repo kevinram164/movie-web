@@ -13,7 +13,8 @@ RUN apt-get update \
     && chown -R 1001:0 /tmp/cinehome-work
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --force-reinstall "setuptools==75.8.2"
 
 COPY worker ./worker
 
