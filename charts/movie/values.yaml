@@ -34,6 +34,7 @@ movieApi:
     MEDIA_QUEUE: "cinehome:media:jobs"
     REDIS_SENTINEL_MASTER: "mymaster"
     REDIS_SENTINEL_PORT: "26379"
+    REDIS_SENTINEL_HOSTS: "redis-ha-node-0.redis-ha-headless.redis.svc.cluster.local:26379,redis-ha-node-1.redis-ha-headless.redis.svc.cluster.local:26379,redis-ha-node-2.redis-ha-headless.redis.svc.cluster.local:26379"
     CORS_ORIGINS: "https://cinehome.automationecom.click,https://cinehome.apps.ocp01.npd.co"
     SEED_DEMO_DATA: "true"
   # Keys lấy từ appSecretName
@@ -89,6 +90,8 @@ mediaWorker:
     WORK_DIR: "/tmp/cinehome-work"
     REDIS_SENTINEL_MASTER: "mymaster"
     REDIS_SENTINEL_PORT: "26379"
+    # Bitnami: dùng headless — ClusterIP:26379 làm redis-py AUTH fail từ ns khác
+    REDIS_SENTINEL_HOSTS: "redis-ha-node-0.redis-ha-headless.redis.svc.cluster.local:26379,redis-ha-node-1.redis-ha-headless.redis.svc.cluster.local:26379,redis-ha-node-2.redis-ha-headless.redis.svc.cluster.local:26379"
   secretEnvKeys:
     - DATABASE_URL
     - REDIS_URL
