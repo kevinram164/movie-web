@@ -9,6 +9,8 @@ movieApi:
     OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
     OTEL_SERVICE_NAME: "movie-api"
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-ocp,k8s.namespace.name=npd-movie,k8s.cluster.name=ocp01"
+    OTEL_HEARTBEAT: "1"
+    OTEL_HEARTBEAT_SECONDS: "30"
 
 mediaWorker:
   env:
@@ -16,3 +18,5 @@ mediaWorker:
     OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
     OTEL_SERVICE_NAME: "media-worker"
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-ocp,k8s.namespace.name=npd-movie,k8s.cluster.name=ocp01"
+    OTEL_HEARTBEAT: "1"
+    OTEL_HEARTBEAT_SECONDS: "30"

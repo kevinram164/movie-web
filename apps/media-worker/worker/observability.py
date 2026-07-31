@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import os
+import threading
+import time
 from contextlib import nullcontext
+
+_heartbeat_started: set[str] = set()
 
 
 def init_tracing(service_name: str = "media-worker") -> None:
@@ -37,8 +41,45 @@ def init_tracing(service_name: str = "media-worker") -> None:
                 SQLAlchemyInstrumentor().instrument(engine=db.engine)
         except Exception:
             pass
+
+        start_heartbeat(name)
     except Exception:
         pass
+
+
+def start_heartbeat(service_name: str) -> None:
+    """Periodic SERVER span so Instana keeps media-worker visible without jobs."""
+    if not os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip():
+        return
+    if os.getenv("OTEL_HEARTBEAT", "1").strip().lower() in ("0", "false", "no", "off"):
+        return
+    if service_name in _heartbeat_started:
+        return
+    _heartbeat_started.add(service_name)
+    try:
+        interval = max(10, int(os.getenv("OTEL_HEARTBEAT_SECONDS", "30")))
+    except ValueError:
+        interval = 30
+    tracer = get_tracer(service_name)
+    if not tracer:
+        return
+
+    def _loop() -> None:
+        from opentelemetry.trace import SpanKind, Status, StatusCode
+
+        while True:
+            try:
+                with tracer.start_as_current_span(
+                    "otel.heartbeat",
+                    kind=SpanKind.SERVER,
+                    attributes={"heartbeat": True, "http.route": "/__heartbeat__"},
+                ) as span:
+                    span.set_status(Status(StatusCode.OK))
+            except Exception:
+                pass
+            time.sleep(interval)
+
+    threading.Thread(target=_loop, name=f"otel-hb-{service_name}", daemon=True).start()
 
 
 def get_tracer(service_name: str = "media-worker"):
