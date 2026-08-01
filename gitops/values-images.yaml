@@ -3,7 +3,7 @@
 movieApi:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/movie-api
-    tag: "8def827"
+    tag: "4b8944b"
     pullPolicy: Always
 
 movieWeb:
@@ -15,5 +15,5 @@ movieWeb:
 mediaWorker:
   image:
     repository: harbor-platform.apps.ocp01.npd.co/movie-web/media-worker
-    tag: "8def827"
+    tag: "4b8944b"
     pullPolicy: Always
