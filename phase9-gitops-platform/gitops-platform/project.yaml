@@ -19,7 +19,6 @@ spec:
     - https://charts.jenkins.io
     - https://coroot.github.io/helm-charts
     - https://open-telemetry.github.io/opentelemetry-helm-charts
-    - https://helm.linkerd.io/stable
   destinations:
     - namespace: npd-movie
       server: https://kubernetes.default.svc
@@ -38,10 +37,6 @@ spec:
     - namespace: external-secrets
       server: https://kubernetes.default.svc
     - namespace: observability
-      server: https://kubernetes.default.svc
-    - namespace: linkerd
-      server: https://kubernetes.default.svc
-    - namespace: linkerd-viz
       server: https://kubernetes.default.svc
     - namespace: kube-system
       server: https://kubernetes.default.svc
@@ -67,10 +62,6 @@ spec:
     - group: apiregistration.k8s.io
       kind: APIService
     - group: coroot.com
-      kind: "*"
-    - group: policy.linkerd.io
-      kind: "*"
-    - group: linkerd.io
       kind: "*"
   namespaceResourceWhitelist:
     - group: "*"

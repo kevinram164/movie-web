@@ -6,5 +6,4 @@ resources:
   - vault-route.yaml
   - argocd-route.yaml
   - coroot-route.yaml
-  - linkerd-viz-route.yaml
   # CineHome + MinIO routes: deploy/routes (cinehome-app-of-apps)
