@@ -165,17 +165,22 @@ oc exec -i -n vault vault-0 -- env \
   bash -s < scripts/vault-seed-cinehome-secrets.sh
 ```
 
-`REDIS_URL` mặc định **không** password (`redis://redis-ha.redis.svc.cluster.local:6379/0`). Chỉ set `REDIS_PASSWORD=...` nếu Redis bật AUTH.
+`REDIS_URL` **phải** có password (Redis AUTH bật). Seed lại nếu thiếu:
+
+```bash
+REDIS_PASSWORD=$(oc -n redis get secret redis-ha -o jsonpath='{.data.redis-password}' | base64 -d)
+# phải ra dạng redis://:PASSWORD@redis-ha.redis.svc...
+```
 
 | Vault | K8s Secret | Namespace | Ghi chú |
 |-------|------------|-----------|---------|
-| `cinehome/app` | `cinehome-app-secrets` | `npd-movie` | App env |
+| `cinehome/app` | `cinehome-app-secrets` | `npd-movie` | App env — `REDIS_URL` có password |
 | `cinehome/movie-db` | `cinehome-movie-db` | `postgres` | Password user movie |
 | (cluster) | `redis-ha` | `redis` | Shared — đừng ESO ghi đè |
 | (cluster) | `postgres-ha-postgresql` | `postgres` | Shared banking — đừng ESO ghi đè |
 
 DSN write: `postgres-ha-postgresql-primary.postgres.svc.cluster.local:5432`  
-Redis: `redis-ha.redis.svc.cluster.local:6379` (Sentinel HA 3 node)
+Redis Sentinel: master `mymaster`, port `26379` / data `6379`
 
 Tách khỏi banking `secret/platform/harbor-pull`.  
 ESO → K8s secret `harbor-pull-creds` chỉ trong **`npd-movie`**.

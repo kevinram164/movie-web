@@ -41,6 +41,7 @@ def _sentinel_endpoints(host: str, sentinel_port: int) -> list[tuple[str, int]]:
                 out.append((part, sentinel_port))
         if out:
             return out
+
     if "redis-ha" in host and "headless" not in host:
         return [
             (
@@ -67,7 +68,6 @@ def _try_sentinel(
         socket_timeout=socket_timeout,
         socket_connect_timeout=socket_connect_timeout,
         sentinel_kwargs=sentinel_kwargs,
-        **{k: v for k, v in master_kwargs.items() if k in ("username", "password")},
     )
     client = sentinel.master_for(
         master,
@@ -102,26 +102,30 @@ def get_redis_client(
     endpoints = _sentinel_endpoints(host, sentinel_port)
     base_conn = {"protocol": 2}
 
-    attempts: list[tuple[dict, dict]] = []
+    attempts: list[tuple[str, dict, dict]] = []
     if password is not None:
-        user = username or os.getenv("REDIS_USERNAME", "default").strip() or "default"
         attempts.append(
             (
-                {**base_conn, "username": user, "password": password},
-                {**base_conn, "username": user, "password": password},
-            )
-        )
-        attempts.append(
-            (
+                "pass-only",
                 {**base_conn, "password": password},
                 {**base_conn, "password": password},
             )
         )
+        user = username or os.getenv("REDIS_USERNAME", "").strip() or None
+        if user:
+            attempts.append(
+                (
+                    f"acl:{user}",
+                    {**base_conn, "username": user, "password": password},
+                    {**base_conn, "username": user, "password": password},
+                )
+            )
     else:
-        attempts.append((dict(base_conn), dict(base_conn)))
+        attempts.append(("no-auth", dict(base_conn), dict(base_conn)))
 
     last_err: Exception | None = None
-    for sentinel_kw, master_kw in attempts:
+    errors: list[str] = []
+    for label, sentinel_kw, master_kw in attempts:
         try:
             return _try_sentinel(
                 endpoints,
@@ -139,7 +143,11 @@ def get_redis_client(
             OSError,
         ) as exc:
             last_err = exc
+            errors.append(f"{label}: {type(exc).__name__}: {exc}")
             continue
 
     assert last_err is not None
-    raise last_err
+    detail = " | ".join(errors) if errors else str(last_err)
+    raise redis.sentinel.MasterNotFoundError(
+        f"No master found for {sentinel_master!r} via {endpoints!r} — {detail}"
+    ) from last_err
