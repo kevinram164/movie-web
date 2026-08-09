@@ -59,6 +59,71 @@ def _sentinel_endpoints(host: str, sentinel_port: int) -> list[tuple[str, int]]:
     return [(host, sentinel_port)]
 
 
+def _sentinel_conn(host: str, port: int, password: str | None, timeout: float) -> redis.Redis:
+    kwargs: dict = {
+        "host": host,
+        "port": port,
+        "socket_timeout": timeout,
+        "socket_connect_timeout": timeout,
+        "decode_responses": True,
+    }
+    if password is not None:
+        kwargs["password"] = password
+    return redis.Redis(**kwargs)
+
+
+def _discover_master_addr(
+    endpoints: list[tuple[str, int]],
+    master: str,
+    password: str | None,
+    timeout: float,
+) -> tuple[str, int, str]:
+    """Same path as redis-cli SENTINEL GET-MASTER-ADDR-BY-NAME (avoids redis-py Sentinel quirks)."""
+    errors: list[str] = []
+    seen_names: list[str] = []
+
+    for host, port in endpoints:
+        for auth_label, pwd in (("pass", password), ("no-auth", None)):
+            if auth_label == "no-auth" and password is None:
+                continue
+            try:
+                s = _sentinel_conn(host, port, pwd, timeout)
+                addr = s.execute_command("SENTINEL", "GET-MASTER-ADDR-BY-NAME", master)
+                if addr and len(addr) >= 2 and addr[0] and addr[1]:
+                    return str(addr[0]), int(addr[1]), f"{host}:{port}/{auth_label}"
+                try:
+                    masters = s.execute_command("SENTINEL", "MASTERS")
+                    names = _master_names_from_sentinel(masters)
+                    for n in names:
+                        if n not in seen_names:
+                            seen_names.append(n)
+                except Exception:
+                    pass
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{host}:{port}/{auth_label}: {type(exc).__name__}: {exc}")
+
+    hint = f" known masters={seen_names}" if seen_names else ""
+    raise redis.sentinel.MasterNotFoundError(
+        f"No master found for {master!r} via {endpoints!r}{hint} — {'; '.join(errors) or 'no sentinel reply'}"
+    )
+
+
+def _master_names_from_sentinel(masters) -> list[str]:
+    """Parse SENTINEL MASTERS reply (list of field/value lists)."""
+    names: list[str] = []
+    if not isinstance(masters, list):
+        return names
+    for entry in masters:
+        if not isinstance(entry, (list, tuple)):
+            continue
+        fields = [str(x) for x in entry]
+        for i in range(0, len(fields) - 1, 2):
+            if fields[i] == "name":
+                names.append(fields[i + 1])
+                break
+    return names
+
+
 def _try_sentinel(
     endpoints: list[tuple[str, int]],
     *,
@@ -69,9 +134,6 @@ def _try_sentinel(
     sentinel_kwargs: dict,
     master_kwargs: dict,
 ) -> redis.Redis:
-    # Do NOT pass username/password as top-level Sentinel kwargs — redis-py
-    # treats those as master connection_kwargs and some versions mishandle ACL
-    # vs requirepass. Auth for Sentinel must live only in sentinel_kwargs.
     sentinel = Sentinel(
         endpoints,
         socket_timeout=socket_timeout,
@@ -109,12 +171,35 @@ def get_redis_client(
         )
 
     endpoints = _sentinel_endpoints(host, sentinel_port)
-    # protocol=2: avoid RESP3 HELLO auth quirks with Bitnami Sentinel
-    base_conn = {"protocol": 2}
 
+    # 1) redis-cli equivalent — works from npd-movie when Sentinel() does not
+    try:
+        mhost, mport, via = _discover_master_addr(
+            endpoints, sentinel_master, password, socket_connect_timeout
+        )
+        print(f"[redis] sentinel master {sentinel_master}={mhost}:{mport} via {via}")
+        client_kw: dict = {
+            "host": mhost,
+            "port": mport,
+            "db": db,
+            "decode_responses": True,
+            "socket_timeout": socket_timeout,
+            "socket_connect_timeout": socket_connect_timeout,
+        }
+        if password is not None:
+            client_kw["password"] = password
+        if username:
+            client_kw["username"] = username
+        client = redis.Redis(**client_kw)
+        client.ping()
+        return client
+    except Exception as discover_err:  # noqa: BLE001
+        discover_detail = f"{type(discover_err).__name__}: {discover_err}"
+
+    # 2) Fallback: redis-py Sentinel class
+    base_conn = {"protocol": 2}
     attempts: list[tuple[str, dict, dict]] = []
     if password is not None:
-        # Bitnami requirepass: password-only first (username=default often breaks Sentinel)
         attempts.append(
             (
                 "pass-only",
@@ -135,7 +220,7 @@ def get_redis_client(
         attempts.append(("no-auth", dict(base_conn), dict(base_conn)))
 
     last_err: Exception | None = None
-    errors: list[str] = []
+    errors: list[str] = [f"cli-discover: {discover_detail}"]
     for label, sentinel_kw, master_kw in attempts:
         try:
             return _try_sentinel(
@@ -158,7 +243,6 @@ def get_redis_client(
             continue
 
     assert last_err is not None
-    detail = " | ".join(errors) if errors else str(last_err)
     raise redis.sentinel.MasterNotFoundError(
-        f"No master found for {sentinel_master!r} via {endpoints!r} — {detail}"
+        f"No master found for {sentinel_master!r} via {endpoints!r} — {' | '.join(errors)}"
     ) from last_err

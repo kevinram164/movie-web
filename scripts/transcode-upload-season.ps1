@@ -61,21 +61,31 @@ function Clean-EpisodeTitle([string]$title) {
   return ($t -replace '\s+', ' ').Trim()
 }
 
-function Get-EpisodeTitle([string]$baseName) {
+function Test-ReleaseJunkTitle([string]$title) {
+  # Scene/WEB-DL leftovers: "1080p.WEB.H264-SuccessfulCrab"
+  return ($title -match '(?i)^(480p|720p|1080p|2160p)\b') -or
+    ($title -match '(?i)\b(WEB[-.]?DL|WEBRip|BluRay|H264|x264|AMZN|NF|DSNP)\b')
+}
+
+function Get-EpisodeTitle([string]$baseName, [int]$EpisodeNumber = 0) {
+  $raw = $null
   if ($baseName -match '(?i)S\d{1,2}\s*E\d{1,3}\s*[-.]\s*(.+)$') {
-    return (Clean-EpisodeTitle $Matches[1])
+    $raw = Clean-EpisodeTitle $Matches[1]
+  } elseif ($baseName -match '(?i)Ep\.?\s*\d{1,3}\s*[-.]\s*(.+)$') {
+    $raw = Clean-EpisodeTitle $Matches[1]
+  } elseif ($baseName -match '(?i)^\d{1,2}x\d{1,3}\s*[-.]?\s*(.+)$') {
+    $raw = Clean-EpisodeTitle $Matches[1]
+  } elseif ($baseName -match '^\d{1,2}\.\s*(.+)$') {
+    # "01. Justice League - The New Frontier (2008)" or file without Ep code
+    $raw = Clean-EpisodeTitle $Matches[1]
+  } else {
+    $raw = Clean-EpisodeTitle $baseName
   }
-  if ($baseName -match '(?i)Ep\.?\s*\d{1,3}\s*[-.]\s*(.+)$') {
-    return (Clean-EpisodeTitle $Matches[1])
+  if (-not $raw -or (Test-ReleaseJunkTitle $raw)) {
+    if ($EpisodeNumber -gt 0) { return ("Episode {0:D2}" -f $EpisodeNumber) }
+    return "Episode"
   }
-  if ($baseName -match '(?i)^\d{1,2}x\d{1,3}\s*[-.]?\s*(.+)$') {
-    return (Clean-EpisodeTitle $Matches[1])
-  }
-  # "01. Justice League - The New Frontier (2008)" or file without Ep code
-  if ($baseName -match '^\d{1,2}\.\s*(.+)$') {
-    return (Clean-EpisodeTitle $Matches[1])
-  }
-  return (Clean-EpisodeTitle $baseName)
+  return $raw
 }
 
 function Get-EpisodeInfoFromPath([System.IO.FileInfo]$file) {
@@ -167,6 +177,7 @@ function Ensure-CatalogSeries(
       "batman-subzero"                = "Batman & Mr. Freeze: SubZero"
       "batman-tas-movies"             = "Batman TAS Movies"
       "batman-return-of-the-joker"    = "Batman Beyond: Return of the Joker"
+      "new-batman-series"             = "New Batman Series"
       "justice-league-movies"         = "Justice League Animated Movies"
       "spiderman-animated"            = "Spider-Man: The Animated Series"
     }
@@ -289,9 +300,9 @@ function Convert-SrtToVtt([string]$SrtPath, [string]$VttPath) {
   $ErrorActionPreference = "Continue"
   try {
     foreach ($enc in $encodings) {
-      if (Test-Path $VttPath) { Remove-Item -Force $VttPath -ErrorAction SilentlyContinue }
+      if (Test-Path -LiteralPath $VttPath) { Remove-Item -LiteralPath $VttPath -Force -ErrorAction SilentlyContinue }
       $null = & ffmpeg -hide_banner -loglevel error -y -sub_charenc $enc -i $SrtPath $VttPath 2>&1
-      if ($LASTEXITCODE -eq 0 -and (Test-Path $VttPath) -and ((Get-Item $VttPath).Length -gt 0)) {
+      if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $VttPath) -and ((Get-Item -LiteralPath $VttPath).Length -gt 0)) {
         return $true
       }
     }
@@ -339,7 +350,12 @@ function Test-MinioObject([string]$Alias, [string]$BucketName, [string]$Key) {
 Require-Cmd ffmpeg
 if (-not $SkipUpload) { Require-Cmd mc }
 
-$candidates = @(Get-ChildItem -Path $SourceDir -File -Recurse | Where-Object {
+# -LiteralPath: folder names with [brackets] (e.g. [TGx]) break -Path wildcards
+if (-not (Test-Path -LiteralPath $SourceDir)) {
+  throw "SourceDir not found: $SourceDir"
+}
+$SourceDir = (Resolve-Path -LiteralPath $SourceDir).Path
+$candidates = @(Get-ChildItem -LiteralPath $SourceDir -File -Recurse | Where-Object {
   if ($_.Extension -notmatch '(?i)^\.(mp4|mkv|m4v|mov)$') { return $false }
   if ($_.BaseName -match '(?i)^sample$|\bsample\b') { return $false }
   if (Test-IsExtraPath $_.FullName) { return $false }
@@ -362,8 +378,11 @@ foreach ($f in $candidates) {
   $title = $null
   if ($info.PSObject.Properties.Name -contains "Title" -and $info.Title) {
     $title = $info.Title
+    if (Test-ReleaseJunkTitle $title) {
+      $title = Get-EpisodeTitle $f.BaseName $info.Episode
+    }
   } else {
-    $title = Get-EpisodeTitle $f.BaseName
+    $title = Get-EpisodeTitle $f.BaseName $info.Episode
   }
   $parsed += [pscustomobject]@{
     File    = $f
@@ -450,8 +469,10 @@ foreach ($item in $videos | Sort-Object Season, Episode) {
   $master = Join-Path $work "master.m3u8"
   $seg = Join-Path $work "seg_%04d.ts"
 
+  # -sn: skip embedded subs (otherwise ffmpeg emits masterN.vtt junk into HLS folder)
   # -ac 2: browser khong phat duoc AAC 5.1 (nguon web-dl DDP) -> ep stereo
   & ffmpeg -hide_banner -loglevel error -y -i $vid.FullName `
+    -map 0:v:0 -map 0:a:0? -sn `
     -c:v libx264 -preset veryfast -crf 22 `
     -c:a aac -b:a 160k -ac 2 `
     -hls_time 6 -hls_playlist_type vod `
@@ -463,8 +484,9 @@ foreach ($item in $videos | Sort-Object Season, Episode) {
     continue
   }
 
+  # -LiteralPath: folder names with [brackets] break Test-Path wildcards
   $srt = Join-Path $vid.DirectoryName ($vid.BaseName + ".srt")
-  if (Test-Path $srt) {
+  if (Test-Path -LiteralPath $srt) {
     $vtt = Join-Path $work "subs.vi.vtt"
     if (Convert-SrtToVtt $srt $vtt) {
       Inject-SubsIntoMaster $master $work

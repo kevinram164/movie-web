@@ -69,7 +69,17 @@ export default function WatchPage() {
 
     let hls: Hls | undefined
     if (Hls.isSupported()) {
-      hls = new Hls({ enableWorker: true })
+      // Buffer lớn hơn mặc định (~30s) để chịu tải segment chậm qua tunnel
+      hls = new Hls({
+        enableWorker: true,
+        maxBufferLength: 90,
+        maxMaxBufferLength: 180,
+        maxBufferSize: 120 * 1000 * 1000,
+        backBufferLength: 30,
+        fragLoadingTimeOut: 30000,
+        fragLoadingMaxRetry: 6,
+        manifestLoadingTimeOut: 20000,
+      })
       hls.loadSource(hlsUrl)
       hls.attachMedia(video)
       // Dùng <track> VTT riêng; tắt subtitle HLS để tránh hiện 2 lần
