@@ -17,11 +17,13 @@ spec:
       labels:
         app.kubernetes.io/name: cinehome
         app.kubernetes.io/component: movie-web
+        istio.io/dataplane-mode: none
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      serviceAccountName: movie-web
       containers:
         - name: movie-web
           image: "{{ .Values.movieWeb.image.repository }}:{{ .Values.movieWeb.image.tag | toString }}"

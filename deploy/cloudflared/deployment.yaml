@@ -17,6 +17,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: cloudflared
+        istio.io/dataplane-mode: none
     spec:
       containers:
         - name: cloudflared

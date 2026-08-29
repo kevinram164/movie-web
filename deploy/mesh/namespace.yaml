@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: npd-movie
+  labels:
+    istio-discovery: enabled
+    # Ambient trên movie-api / media-worker. movie-web + cloudflared = none.

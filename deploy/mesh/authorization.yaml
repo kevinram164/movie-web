@@ -1,0 +1,52 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: npd-movie
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-movie-web
+  namespace: npd-movie
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: movie-web
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            ports: ["8080"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-movie-web-to-api
+  namespace: npd-movie
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: movie-api
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/npd-movie/sa/movie-web"]
+      to:
+        - operation:
+            ports: ["8080"]
+---
+# media-worker → Redis/MinIO: ngoài mesh, không cần ALLOW HTTP trong ns.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-observability-scrape
+  namespace: npd-movie
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: ["observability", "openshift-monitoring"]

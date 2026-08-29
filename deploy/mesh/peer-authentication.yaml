@@ -1,0 +1,33 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: npd-movie
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: route-movie-web
+  namespace: npd-movie
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: movie-web
+  mtls:
+    mode: PERMISSIVE
+---
+# cloudflared: label istio.io/dataplane-mode=none trên pod (deploy/cloudflared)
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: cloudflared
+  namespace: npd-movie
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  mtls:
+    mode: PERMISSIVE
