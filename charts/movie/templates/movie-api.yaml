@@ -18,6 +18,10 @@ spec:
         app.kubernetes.io/name: cinehome
         app.kubernetes.io/component: movie-api
         istio.io/dataplane-mode: ambient
+      {{- if .Values.vault.enabled }}
+      annotations:
+        {{- include "cinehome.vault.podAnnotations" (dict "root" $ "keys" .Values.movieApi.secretEnvKeys) | nindent 8 }}
+      {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -28,6 +32,11 @@ spec:
         - name: movie-api
           image: "{{ .Values.movieApi.image.repository }}:{{ .Values.movieApi.image.tag | toString }}"
           imagePullPolicy: {{ .Values.movieApi.image.pullPolicy }}
+          {{- if .Values.vault.enabled }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - . /vault/secrets/env && exec uvicorn app.main:app --host 0.0.0.0 --port 8080
+          {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -36,12 +45,14 @@ spec:
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+            {{- if not .Values.vault.enabled }}
             {{- range .Values.movieApi.secretEnvKeys }}
             - name: {{ . }}
               valueFrom:
                 secretKeyRef:
                   name: {{ $.Values.appSecretName }}
                   key: {{ . }}
+            {{- end }}
             {{- end }}
           readinessProbe:
             httpGet:

@@ -6,6 +6,12 @@ imagePullSecrets:
 # Secrets từ Vault → ESO Secret cinehome-app-secrets (không password trong Git)
 appSecretName: cinehome-app-secrets
 
+# vault.enabled=true: bỏ appSecretName, Vault Agent Injector render secretEnvKeys vào /vault/secrets/env
+vault:
+  enabled: false
+  role: cinehome-app
+  appPath: secret/data/cinehome/app
+
 movieApi:
   enabled: true
   replicaCount: 1

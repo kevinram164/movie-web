@@ -18,6 +18,10 @@ spec:
         app.kubernetes.io/name: cinehome
         app.kubernetes.io/component: media-worker
         istio.io/dataplane-mode: ambient
+      {{- if .Values.vault.enabled }}
+      annotations:
+        {{- include "cinehome.vault.podAnnotations" (dict "root" $ "keys" .Values.mediaWorker.secretEnvKeys) | nindent 8 }}
+      {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -28,17 +32,24 @@ spec:
         - name: media-worker
           image: "{{ .Values.mediaWorker.image.repository }}:{{ .Values.mediaWorker.image.tag | toString }}"
           imagePullPolicy: {{ .Values.mediaWorker.image.pullPolicy }}
+          {{- if .Values.vault.enabled }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - . /vault/secrets/env && exec python -m worker.main
+          {{- end }}
           env:
             {{- range $k, $v := .Values.mediaWorker.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+            {{- if not .Values.vault.enabled }}
             {{- range .Values.mediaWorker.secretEnvKeys }}
             - name: {{ . }}
               valueFrom:
                 secretKeyRef:
                   name: {{ $.Values.appSecretName }}
                   key: {{ . }}
+            {{- end }}
             {{- end }}
           resources:
             {{- toYaml .Values.mediaWorker.resources | nindent 12 }}

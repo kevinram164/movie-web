@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cinehome
+  namespace: npd-movie
+  annotations:
+    haproxy.org/ssl-redirect: "false"
+    haproxy.org/timeout-server: "300s"
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: npd-movie.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: movie-web
+                port:
+                  number: 8080

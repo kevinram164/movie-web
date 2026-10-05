@@ -1,0 +1,20 @@
+# Root CineHome (dev-k8s): kubectl apply -f deploy/dev-k8s/argocd/appproject.yaml -f deploy/dev-k8s/argocd/app-of-apps.yaml
+# Yêu cầu: infra (cloud-native-platform) Healthy, Vault đã seed secret/cinehome/*, harbor-pull-creds trong npd-movie.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cinehome-root-dev-k8s
+  namespace: argocd
+spec:
+  project: cinehome
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: deploy/dev-k8s/argocd/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,33 @@
+# movie-api + movie-web + media-worker (chart charts/movie), secret qua Vault Agent Injector.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cinehome
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: app
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: cinehome
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: charts/movie
+    helm:
+      releaseName: cinehome
+      valueFiles:
+        - values.yaml
+        - ../../deploy/dev-k8s/values/values-dev-k8s.yaml
+        - ../../deploy/dev-k8s/values/values-images.yaml
+        - ../../deploy/dev-k8s/values/values-observability.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: npd-movie
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

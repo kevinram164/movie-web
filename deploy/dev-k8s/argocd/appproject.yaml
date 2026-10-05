@@ -1,0 +1,25 @@
+# AppProject cinehome — ứng dụng CineHome trên dev-k8s (ns npd-movie).
+# postgres: chỉ Job movie-db-init (tạo DB/user movie trên postgres-ha dùng chung).
+# MinIO, Postgres, Redis thuộc project platform ở repo cloud-native-platform.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cinehome
+  namespace: argocd
+spec:
+  description: CineHome movie streaming (dev-k8s)
+  sourceRepos:
+    - https://github.com/kevinram164/movie-web.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: npd-movie
+    - server: https://kubernetes.default.svc
+      namespace: postgres
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -1,0 +1,24 @@
+# Truy cập nội bộ https://npd-movie.co (f5-lb → HAProxy ingress). Public đi qua Cloudflare Tunnel.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cinehome-ingress
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: cinehome
+    app.kubernetes.io/component: ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: cinehome
+  source:
+    repoURL: https://github.com/kevinram164/movie-web.git
+    targetRevision: main
+    path: deploy/dev-k8s/manifests/ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: npd-movie
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true

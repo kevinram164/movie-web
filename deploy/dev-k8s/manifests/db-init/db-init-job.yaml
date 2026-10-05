@@ -1,0 +1,76 @@
+# PreSync — đảm bảo DB/user `movie` trên postgres-ha dùng chung (idempotent, không đụng banking/keycloak).
+# DB cũ từ OCP còn trên NFS → chỉ ALTER password theo Vault secret/cinehome/movie-db.password.
+# Superuser postgres: Secret postgres-ha-postgresql do chart Bitnami tạo (cùng ns postgres).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: movie-db-init
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-2"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: movie-db-init
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/name: cinehome
+    app.kubernetes.io/component: db-init
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        app: movie-db-init
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/role: "cinehome-db-init"
+        vault.hashicorp.com/agent-inject-secret-db-password: "secret/data/cinehome/movie-db"
+        vault.hashicorp.com/agent-inject-template-db-password: |-
+          {{- with secret "secret/data/cinehome/movie-db" -}}
+          {{- .Data.data.password -}}
+          {{- end -}}
+    spec:
+      serviceAccountName: movie-db-init
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-postgresql
+                  key: postgres-password
+            - name: PGHOST
+              value: postgres-ha-postgresql-primary.postgres.svc.cluster.local
+            - name: PGUSER
+              value: postgres
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              MOVIE_PW="$(cat /vault/secrets/db-password)"
+              psql -d postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='movie'" | grep -q 1 || \
+                psql -d postgres -c "CREATE USER movie;"
+              # biến psql (:'pw') chỉ được thay khi đọc lệnh từ stdin, không áp dụng cho -c
+              echo "ALTER USER movie WITH LOGIN PASSWORD :'pw';" | psql -d postgres -v ON_ERROR_STOP=1 -v pw="$MOVIE_PW"
+              psql -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='movie'" | grep -q 1 || \
+                psql -d postgres -c "CREATE DATABASE movie OWNER movie;"
+              psql -d postgres -c "ALTER DATABASE movie OWNER TO movie;"
+              psql -d movie -c "GRANT ALL ON SCHEMA public TO movie;"
+              echo "movie DB init done"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

@@ -1,0 +1,19 @@
+# Image tags — Jenkins (dev-k8s) bump tag. Harbor dùng lại DB/registry OCP nên tag cũ vẫn pull được.
+# IMPORTANT: always quote tags — bare hex like 4700539e is parsed as a float in YAML.
+movieApi:
+  image:
+    repository: npd-harbor.co/movie-web/movie-api
+    tag: "2418bbd"
+    pullPolicy: IfNotPresent
+
+movieWeb:
+  image:
+    repository: npd-harbor.co/movie-web/movie-web
+    tag: "2418bbd"
+    pullPolicy: IfNotPresent
+
+mediaWorker:
+  image:
+    repository: npd-harbor.co/movie-web/media-worker
+    tag: "2418bbd"
+    pullPolicy: IfNotPresent

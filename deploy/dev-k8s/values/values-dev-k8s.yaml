@@ -1,0 +1,11 @@
+# dev-k8s overrides cho charts/movie.
+# Vault KV v2 secret/cinehome/app {DATABASE_URL, REDIS_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY}
+# → role cinehome-app (SA movie-api, media-worker ns npd-movie) → /vault/secrets/env.
+vault:
+  enabled: true
+  role: cinehome-app
+  appPath: secret/data/cinehome/app
+
+movieApi:
+  env:
+    CORS_ORIGINS: "https://cinehome.automationecom.click,https://npd-movie.co"
