@@ -10,6 +10,7 @@ from app.config import settings
 from app.db import Episode, Movie, Season, Series, get_db, init_db
 from app.minio_client import ensure_buckets, presigned_put_url, public_object_url, put_fileobj
 from app.observability import instrument_fastapi
+from app.playback import PlaybackEvents, record_playback
 from app.queue import enqueue_media_job
 from app.seed import artwork_for_slug, seed_movies, seed_series, sync_series_artwork
 
@@ -249,6 +250,11 @@ def on_startup() -> None:
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": settings.app_name}
+
+
+@app.post("/api/playback/events", status_code=204)
+def playback_events(body: PlaybackEvents):
+    record_playback(body)
 
 
 @app.get("/api/home", response_model=HomeOut)

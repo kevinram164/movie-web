@@ -84,6 +84,34 @@ oc -n npd-movie scale deploy/cloudflared --replicas=0
 
 Trên Zero Trust dashboard, public hostname `cinehome.automationecom.click` giữ nguyên service `http://movie-web.npd-movie.svc.cluster.local:8080` (cùng tên Service/namespace trên dev-k8s). Mọi connector của một tunnel nhận request cho mọi hostname của tunnel đó, nên tunnel này chỉ nên chứa hostname của CineHome; hệ thống khác dùng tunnel riêng. Tab Connectors chỉ nên còn các pod `cloudflared` của dev-k8s.
 
+## Observability
+
+| Loại | Nguồn | Xem ở |
+|------|-------|-------|
+| Trace (APM) | `movie-api` (FastAPI + SQLAlchemy + Redis), `media-worker` (span `media-worker.process`) → OTLP `opentelemetry-collector.observability:4317` → APM Server | Kibana → Observability → APM, environment `dev-k8s` |
+| Log | stdout → Fluent Bit → `logs-movie-*` | Kibana Discover |
+| Metrics HTTP | OTel `spanmetrics` từ trace: `traces_span_metrics_calls_total`, `traces_span_metrics_duration_milliseconds_bucket` (label `service_name`, `span_name`, `span_kind`, `http_status_code`) | Grafana → NPD → **NPD CineHome** |
+| Traffic public | cloudflared `:2000/metrics`: `cloudflared_tunnel_total_requests`, `_request_errors`, `_response_by_code`, `_ha_connections` | Grafana |
+| Hàng đợi transcode | redis-exporter `redis_key_size{key="cinehome:media:jobs"}` | Grafana |
+| QoE người xem | `phim-web-interface/lib/playback-metrics.ts` (hls.js events) → `POST /api/playback/events` → `movie-api` (`app/playback.py`, OTel metrics) → collector → Prometheus | Grafana |
+| MinIO S3 | `minio_s3_requests_ttfb_seconds_distribution{api="getobject"}`, `minio_s3_requests_total`, `minio_s3_traffic_sent_bytes`, `minio_s3_requests_{4xx,5xx}_errors_total` | Grafana |
+| NFS | worker: `node_mountstats_nfs_*` (node-exporter `--collector.mountstats`); server 10.100.1.180: `node_disk_*{job="nfs-server"}` | Grafana |
+| Pod, Postgres | kube-state-metrics/cAdvisor, `pg_database_size_bytes{datname="movie"}` | Grafana |
+
+Metric QoE (label `player`=hlsjs|native, `result`, `error`; không gắn user/episode):
+
+| Chỉ số | PromQL |
+|--------|--------|
+| Video startup p95 | `histogram_quantile(0.95, sum by (le) (rate(cinehome_playback_startup_seconds_bucket[15m])))` |
+| Playback success | `sum(increase(cinehome_playback_sessions_total{result="success"}[1h])) / sum(increase(cinehome_playback_sessions_total{result=~"success\|failed"}[1h]))` |
+| Rebuffer ratio | `sum(rate(cinehome_playback_rebuffer_seconds_total[5m])) / sum(rate(cinehome_playback_watch_seconds_total[5m]))` |
+| Segment download p95 | `histogram_quantile(0.95, sum by (le) (rate(cinehome_segment_load_seconds_bucket[5m])))` |
+| Người đang xem ≈ | `sum(rate(cinehome_playback_watch_seconds_total[2m]))` |
+
+Dashboard **NPD CineHome** xếp theo chuỗi nguyên nhân: Rebuffer → Segment download → MinIO GET TTFB → NFS client READ latency → disk NFS server. Segment chậm mà MinIO nhanh thì nghẽn ở mạng/tunnel/movie-web; MinIO chậm mà NFS client nhanh thì do MinIO (CPU); NFS client chậm mà disk nhanh thì do mạng/nfsd.
+
+`movie-web` (Next.js) chưa có trace; traffic vào nó đo qua cloudflared. Alert (`team=movie` → Telegram, `rules-apps.yaml`): `MovieSiteUnreachable`, `MovieTunnelErrors`, `MovieApi5xx`, `MovieApiSlow`, `MovieMediaQueueBacklog`, `MovieRebufferHigh`, `MovieStartupSlow`, `MoviePlaybackFailures`, `MovieSegmentSlow`, `MovieDeploymentUnavailable`, `MoviePodRestarting`. Hạ tầng (`rules-infra.yaml`): `MinioGetSlow`, `MinioS3Errors`, `NfsServerDown`, `NfsClientReadSlow`, `NfsServerDiskReadSlow`, `NfsServerDiskSaturated`, `NfsServerFilesystemFilling`.
+
 ## Kiểm tra
 
 ```bash

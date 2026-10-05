@@ -1,18 +1,17 @@
-# OTLP → opentelemetry-collector.observability → APM Server (Elastic)
+# OTLP → opentelemetry-collector.observability → APM Server (Elastic) + spanmetrics (Prometheus/Grafana)
+# OTEL_HEARTBEAT=0: span otel.heartbeat chỉ để Instana thấy service, trên APM làm sai throughput/latency.
 movieApi:
   env:
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://opentelemetry-collector.observability.svc.cluster.local:4317"
     OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
     OTEL_SERVICE_NAME: "movie-api"
-    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-k8s,k8s.namespace.name=npd-movie,k8s.cluster.name=npd-k8s"
-    OTEL_HEARTBEAT: "1"
-    OTEL_HEARTBEAT_SECONDS: "30"
+    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-k8s,service.namespace=npd-movie,k8s.namespace.name=npd-movie,k8s.cluster.name=npd-k8s"
+    OTEL_HEARTBEAT: "0"
 
 mediaWorker:
   env:
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://opentelemetry-collector.observability.svc.cluster.local:4317"
     OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
     OTEL_SERVICE_NAME: "media-worker"
-    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-k8s,k8s.namespace.name=npd-movie,k8s.cluster.name=npd-k8s"
-    OTEL_HEARTBEAT: "1"
-    OTEL_HEARTBEAT_SECONDS: "30"
+    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev-k8s,service.namespace=npd-movie,k8s.namespace.name=npd-movie,k8s.cluster.name=npd-k8s"
+    OTEL_HEARTBEAT: "0"

@@ -73,8 +73,42 @@ def init_tracing(service_name: str) -> None:
         _log(f"init FAILED: {exc}")
 
 
+# Prometheus không có histogram mặc định hợp lý cho giây → bucket riêng cho QoE player (app/playback.py)
+_SECONDS_BUCKETS = {
+    "cinehome.playback.startup": [0.25, 0.5, 1, 2, 3, 5, 8, 13, 20, 30],
+    "cinehome.segment.load": [0.05, 0.1, 0.25, 0.5, 1, 2, 4, 8, 15, 30],
+    "cinehome.segment.ttfb": [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+}
+
+
+def init_metrics(service_name: str) -> None:
+    if not os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip():
+        return
+    try:
+        from opentelemetry import metrics
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
+        from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
+        name = os.getenv("OTEL_SERVICE_NAME", service_name).strip() or service_name
+        reader = PeriodicExportingMetricReader(OTLPMetricExporter(insecure=True), export_interval_millis=15000)
+        views = [
+            View(instrument_name=inst, aggregation=ExplicitBucketHistogramAggregation(boundaries=b))
+            for inst, b in _SECONDS_BUCKETS.items()
+        ]
+        metrics.set_meter_provider(
+            MeterProvider(resource=Resource.create({SERVICE_NAME: name}), metric_readers=[reader], views=views)
+        )
+        _log(f"metrics enabled service={name}")
+    except Exception as exc:  # noqa: BLE001
+        _log(f"metrics init FAILED: {exc}")
+
+
 def instrument_fastapi(app, service_name: str) -> None:
     init_tracing(service_name)
+    init_metrics(service_name)
     start_heartbeat(service_name)
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

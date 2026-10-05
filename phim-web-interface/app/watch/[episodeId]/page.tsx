@@ -7,6 +7,7 @@ import Hls from "hls.js"
 import { ArrowLeft, SkipForward } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { fetchEpisode, fetchEpisodeStream, fetchSeries, type Episode } from "@/lib/api"
+import { attachPlaybackMetrics } from "@/lib/playback-metrics"
 
 export default function WatchPage() {
   const params = useParams<{ episodeId: string }>()
@@ -93,8 +94,10 @@ export default function WatchPage() {
       // Safari: phụ đề lấy từ EXT-X-MEDIA trong master.m3u8 (nếu worker đã inject)
       video.src = hlsUrl
     }
+    const detachMetrics = attachPlaybackMetrics(video, hls)
 
     return () => {
+      detachMetrics()
       hls?.destroy()
     }
   }, [hlsUrl])
