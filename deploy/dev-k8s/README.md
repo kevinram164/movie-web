@@ -82,7 +82,7 @@ oc -n argocd patch application cinehome-cloudflared --type merge -p '{"spec":{"s
 oc -n npd-movie scale deploy/cloudflared --replicas=0
 ```
 
-Trên Zero Trust dashboard, public hostname `cinehome.automationecom.click` giữ nguyên service `http://movie-web.npd-movie.svc.cluster.local:8080` (cùng tên Service/namespace trên dev-k8s). Hostname khác trên cùng tunnel (ví dụ `jira.automationecom.click`) sẽ lỗi 502 nếu service đích không có trên dev-k8s.
+Trên Zero Trust dashboard, public hostname `cinehome.automationecom.click` giữ nguyên service `http://movie-web.npd-movie.svc.cluster.local:8080` (cùng tên Service/namespace trên dev-k8s). Mọi connector của một tunnel nhận request cho mọi hostname của tunnel đó, nên tunnel này chỉ nên chứa hostname của CineHome; hệ thống khác dùng tunnel riêng. Tab Connectors chỉ nên còn các pod `cloudflared` của dev-k8s.
 
 ## Kiểm tra
 
