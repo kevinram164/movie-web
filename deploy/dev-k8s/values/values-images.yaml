@@ -3,17 +3,17 @@
 movieApi:
   image:
     repository: npd-harbor.co/movie-web/movie-api
-    tag: "2418bbd"
+    tag: "c10ee53"
     pullPolicy: IfNotPresent
 
 movieWeb:
   image:
     repository: npd-harbor.co/movie-web/movie-web
-    tag: "2418bbd"
+    tag: "c10ee53"
     pullPolicy: IfNotPresent
 
 mediaWorker:
   image:
     repository: npd-harbor.co/movie-web/media-worker
-    tag: "2418bbd"
+    tag: "c10ee53"
     pullPolicy: IfNotPresent
