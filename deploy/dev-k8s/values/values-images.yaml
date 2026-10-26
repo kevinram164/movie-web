@@ -15,5 +15,5 @@ movieWeb:
 mediaWorker:
   image:
     repository: npd-harbor.co/movie-web/media-worker
-    tag: "c10ee53"
+    tag: "50a0277"
     pullPolicy: IfNotPresent
